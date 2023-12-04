@@ -3,133 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marble Run Game</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
+            background-color: #f0f0f0;
         }
 
         canvas {
             display: block;
         }
     </style>
-    <title>Marble Run Game</title>
 </head>
 <body>
 
-<canvas id="marbleRunCanvas" width="800" height="600"></canvas>
+<canvas id="marbleRunCanvas"></canvas>
 
 <script>
     const canvas = document.getElementById("marbleRunCanvas");
     const ctx = canvas.getContext("2d");
 
-    const marbles = [
-        {
-            x: 50,
-            y: 50,
-            radius: 10,
-            color: "blue",
-            speed: getRandomSpeed(),
-            angle: getRandomAngle(),
-            gravity: 0.1
-        },
-        {
-            x: 100,
-            y: 50,
-            radius: 10,
-            color: "red",
-            speed: getRandomSpeed(),
-            angle: getRandomAngle(),
-            gravity: 0.1
-        },
-        {
-            x: 75,
-            y: 50,
-            radius: 10,
-            color: "orange",
-            speed: getRandomSpeed(),
-            angle: getRandomAngle(),
-            gravity: 0.1
-        },
-        {
-            x: 98,
-            y: 568,
-            radius: 10,
-            color: "green",
-            speed: getRandomSpeed()*8,
-            angle: getRandomAngle(),
-            gravity: 0.1
-        },
-        {
-            x: 75,
-            y: 50,
-            radius: 10,
-            color: "yellow",
-            speed: getRandomSpeed()*1,
-            angle: getRandomAngle(),
-            gravity: 0.1
-        },
-        {
-            x: 75,
-            y: 50,
-            radius: 10,
-            color: "brown",
-            speed: getRandomSpeed()*1,
-            angle: getRandomAngle(),
-            gravity: 0.1
-        },
-        {
-            x: 75,
-            y: 50,
-            radius: 10,
-            color: "purple",
-            speed: getRandomSpeed(),
-            angle: getRandomAngle(),
-            gravity: 0.1
-        }
-    ];
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 
-    const goal = {
-        x: canvas.width - 100,
-        y: canvas.height - 100,
-        width: 80,
-        height: 80,
-        color: "green"
+    const marble = {
+        x: canvas.width / 2,
+        y: 0,
+        radius: 10,
+        color: "#3498db",
+        speed: 3
     };
 
-    const ground = {
-        y: canvas.height - 10,
-        color: "brown"
-    };
-
-    const ceiling = {
-        y: 50,
-        color: "gray"
-    };
-
-    const walls = [
-        { x: 0, width: 10, color: "gray" },
-        { x: canvas.width - 10, width: 10, color: "gray" }
-    ];
-
-    const obstacles = [
-        { x: 200, y: 400, width: 100, height: 20, color: "orange" },
-        { x: 350, y: 300, width: 80, height: 30, color: "purple" },
-        { x: 500, y: 450, width: 120, height: 20, color: "pink" },
-        { x: 576, y: 786, width: 020, height: 20, color: "red" }
-    ];
-
-    let winner = null;
-
-    function getRandomSpeed() {
-        return Math.random() * 5 + 2; // Random speed between 2 and 7
-    }
-
-    function getRandomAngle() {
-        return Math.random() * (Math.PI / 4) + Math.PI / 4; // Random angle between π/4 and 2π/4
-    }
-
-    function drawMarble(marble) {
+    function drawMarble() {
         ctx.beginPath();
         ctx.arc(marble.x, marble.y, marble.radius, 0, Math.PI * 2);
         ctx.fillStyle = marble.color;
@@ -137,136 +43,21 @@
         ctx.closePath();
     }
 
-    function drawGoal() {
-        ctx.beginPath();
-        ctx.rect(goal.x, goal.y, goal.width, goal.height);
-        ctx.fillStyle = goal.color;
-        ctx.fill();
-        ctx.closePath();
-    }
-
-    function drawGround() {
-        ctx.beginPath();
-        ctx.moveTo(0, ground.y);
-        ctx.lineTo(canvas.width, ground.y);
-        ctx.strokeStyle = ground.color;
-        ctx.stroke();
-    }
-
-    function drawCeiling() {
-        ctx.beginPath();
-        ctx.moveTo(0, ceiling.y);
-        ctx.lineTo(canvas.width, ceiling.y);
-        ctx.strokeStyle = ceiling.color;
-        ctx.stroke();
-    }
-
-    function drawWalls() {
-        for (const wall of walls) {
-            ctx.beginPath();
-            ctx.rect(wall.x, 0, wall.width, canvas.height);
-            ctx.fillStyle = wall.color;
-            ctx.fill();
-            ctx.closePath();
+    function updateMarble() {
+        marble.y += marble.speed;
+        if (marble.y > canvas.height + marble.radius) {
+            marble.y = 0;
         }
     }
 
-    function drawObstacles() {
-        for (const obstacle of obstacles) {
-            ctx.beginPath();
-            ctx.rect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
-            ctx.fillStyle = obstacle.color;
-            ctx.fill();
-            ctx.closePath();
-        }
-    }
-
-    function updateMarble(marble) {
-        const angle = marble.angle;
-        const speed = marble.speed;
-
-        marble.speedY += marble.gravity;
-
-        marble.x += Math.cos(angle) * speed;
-        marble.y += Math.sin(angle) * speed;
-
-        // Bounce off the walls
-        if (marble.x - marble.radius < walls[0].width || marble.x + marble.radius > canvas.width - walls[1].width) {
-            marble.angle = Math.PI - marble.angle; // Reflect angle
-            marble.x += Math.cos(marble.angle) * speed; // Move marble away from wall
-        }
-
-        // Bounce off the floor
-        if (marble.y + marble.radius > ground.y) {
-            marble.angle = -marble.angle; // Reflect angle
-            marble.y = ground.y - marble.radius;
-        }
-
-        // Bounce off the ceiling
-        if (marble.y - marble.radius < ceiling.y) {
-            marble.angle = -marble.angle; // Reflect angle
-            marble.y = ceiling.y + marble.radius;
-        }
-
-        // Check if the marble reaches the goal
-        if (
-            marble.x + marble.radius > goal.x &&
-            marble.x - marble.radius < goal.x + goal.width &&
-            marble.y + marble.radius > goal.y &&
-            marble.y - marble.radius < goal.y + goal.height
-        ) {
-            if (!winner) {
-                winner = marble.color;
-                alert(`${winner} marble wins!`);
-            }
-        }
-
-        // Check for collisions with obstacles
-        for (const obstacle of obstacles) {
-            if (
-                marble.x + marble.radius > obstacle.x &&
-                marble.x - marble.radius < obstacle.x + obstacle.width &&
-                marble.y + marble.radius > obstacle.y &&
-                marble.y - marble.radius < obstacle.y + obstacle.height
-            ) {
-                const angleToObstacle = Math.atan2(obstacle.y - marble.y, obstacle.x - marble.x);
-                const reflectionAngle = 2 * angleToObstacle - marble.angle;
-
-                marble.angle = reflectionAngle;
-                marble.x += Math.cos(marble.angle) * speed; // Move marble away from obstacle
-                marble.y += Math.sin(marble.angle) * speed; // Move marble away from obstacle
-            }
-        }
-    }
-
-    function gameLoop() {
+    function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        drawGround();
-        drawCeiling();
-        drawWalls();
-        drawObstacles();
-        drawGoal();
-
-        for (const marble of marbles) {
-            drawMarble(marble);
-            updateMarble(marble);
-        }
-
-        requestAnimationFrame(gameLoop);
+        drawMarble();
+        updateMarble();
+        requestAnimationFrame(draw);
     }
 
-    document.addEventListener("keydown", function(event) {
-        // Add logic to control the marbles based on key presses
-        if (event.key === "ArrowRight") {
-            for (const marble of marbles) {
-                marble.speed = getRandomSpeed();
-                marble.angle = getRandomAngle();
-            }
-        }
-    });
-
-    gameLoop();
+    draw();
 </script>
 
 </body>
