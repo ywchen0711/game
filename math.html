@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Quiz Game</title>
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+
+        #quiz-container {
+            text-align: center;
+        }
+
+        #question {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        #input-answer {
+            padding: 5px;
+            font-size: 16px;
+        }
+
+        #result {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+
+        #timer {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="quiz-container">
+    <div id="question"></div>
+    <input type="text" id="input-answer" placeholder="Your Answer">
+    <div id="result"></div>
+    <div id="timer">Time Left: <span id="time">60</span> seconds</div>
+</div>
+
+<script>
+    const questionElement = document.getElementById("question");
+    const inputAnswerElement = document.getElementById("input-answer");
+    const resultElement = document.getElementById("result");
+    const timerElement = document.getElementById("time");
+
+    let score = 0;
+    let timeLeft = 60;
+    let correctAnswer;
+
+    function generateQuestion() {
+        const num1 = Math.floor(Math.random() * 10) + 1;
+        const num2 = Math.floor(Math.random() * 10) + 1;
+        const operator = ['+', '-', '*'][Math.floor(Math.random() * 3)];
+
+        const question = `${num1} ${operator} ${num2}`;
+        correctAnswer = eval(question);
+
+        questionElement.textContent = `Question: ${question}`;
+        resultElement.textContent = ""; // Clear previous result
+    }
+
+    function checkAnswer() {
+        const userAnswer = parseInt(inputAnswerElement.value);
+
+        if (!isNaN(userAnswer)) {
+            if (userAnswer === correctAnswer) {
+                resultElement.textContent = "Correct!";
+                score++;
+            } else {
+                resultElement.textContent = `Wrong! Correct Answer: ${correctAnswer}`;
+            }
+
+            inputAnswerElement.value = "";
+            generateQuestion();
+        }
+    }
+
+    function updateTimer() {
+        timeLeft--;
+        timerElement.textContent = `Time Left: ${timeLeft} seconds`;
+
+        if (timeLeft === 0) {
+            clearInterval(timerInterval);
+            resultElement.textContent = `Game Over! Your Score: ${score}`;
+            inputAnswerElement.disabled = true;
+        }
+    }
+
+    generateQuestion();
+    inputAnswerElement.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            checkAnswer();
+        }
+    });
+
+    const timerInterval = setInterval(updateTimer, 1000);
+</script>
+
+</body>
+</html>
