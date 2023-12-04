@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geometry Dash</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #f0f0f0;
+        }
+
+        #player {
+            position: absolute;
+            bottom: 50px;
+            left: 50px;
+            width: 50px;
+            height: 50px;
+            background-color: #3498db;
+            border-radius: 10px;
+        }
+
+        .obstacle {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background-color: #e74c3c;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="player"></div>
+
+<script>
+    const player = document.getElementById("player");
+    const obstacles = [];
+    let isJumping = false;
+
+    document.addEventListener("keydown", jump);
+
+    function jump(event) {
+        if (event.key === " " && !isJumping) {
+            isJumping = true;
+            player.style.bottom = "150px";
+            setTimeout(() => {
+                player.style.bottom = "50px";
+                isJumping = false;
+            }, 500);
+        }
+    }
+
+    function createObstacle() {
+        const obstacle = document.createElement("div");
+        obstacle.classList.add("obstacle");
+        obstacle.style.left = `${window.innerWidth}px`;
+        obstacle.style.bottom = `${Math.random() * (window.innerHeight - 30)}px`;
+        document.body.appendChild(obstacle);
+        obstacles.push(obstacle);
+    }
+
+    function moveObstacles() {
+        for (let obstacle of obstacles) {
+            const currentLeft = parseInt(obstacle.style.left);
+            obstacle.style.left = `${currentLeft - 5}px`;
+
+            if (currentLeft < -30) {
+                obstacle.remove();
+            }
+        }
+    }
+
+    function checkCollision() {
+        const playerRect = player.getBoundingClientRect();
+
+        for (let obstacle of obstacles) {
+            const obstacleRect = obstacle.getBoundingClientRect();
+
+            if (
+                playerRect.right > obstacleRect.left &&
+                playerRect.left < obstacleRect.right &&
+                playerRect.bottom > obstacleRect.top &&
+                playerRect.top < obstacleRect.bottom
+            ) {
+                gameOver();
+            }
+        }
+    }
+
+    function gameOver() {
+        alert("Game Over!");
+        location.reload(); // Reload the page for simplicity
+    }
+
+    setInterval(createObstacle, 2000);
+    setInterval(moveObstacles, 20);
+    setInterval(checkCollision, 20);
+</script>
+
+</body>
+</html>
