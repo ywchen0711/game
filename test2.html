@@ -3,83 +3,120 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Geometry Dash with Phaser</title>
+    <title>Touch Game</title>
     <style>
         body {
             margin: 0;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #fff;
+            font-size: 20px;
         }
     </style>
 </head>
 <body>
 
-<script src="https://cdn.jsdelivr.net/npm/phaser@3.60.1/dist/phaser.min.js"></script>
+<canvas id="gameCanvas" width="400" height="600"></canvas>
+<div id="score">Score: 0</div>
+
 <script>
-    const config = {
-        type: Phaser.AUTO,
-        width: window.innerWidth,
-        height: window.innerHeight,
-        physics: {
-            default: 'arcade',
-            arcade: {
-                gravity: { y: 1000 },
-                debug: false
-            }
-        },
-        scene: {
-            preload: preload,
-            create: create,
-            update: update
-        }
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const character = {
+        x: canvas.width / 2,
+        y: canvas.height - 50,
+        width: 50,
+        height: 50,
+        speed: 5
     };
 
-    const game = new Phaser.Game(config);
-    let player;
-    let obstacles;
-    let isJumping = false;
+    const fallingObjects = [];
+    let score = 0;
 
-    function preload() {
-        this.load.image('player', 'path/to/your/player/image.png');
-        this.load.image('obstacle', 'path/to/your/obstacle/image.png');
+    function drawCharacter() {
+        ctx.fillStyle = '#00f';
+        ctx.fillRect(character.x, character.y, character.width, character.height);
     }
 
-    function create() {
-        player = this.physics.add.sprite(100, 100, 'player').setOrigin(0.5, 0.5);
-        player.setCollideWorldBounds(true);
-        this.physics.add.collider(player);
-
-        obstacles = this.physics.add.group({
-            key: 'obstacle',
-            repeat: 5,
-            setXY: { x: 800, y: 500, stepX: 200 }
-        });
-        this.physics.add.collider(obstacles, player, gameOver, null, this);
-
-        this.input.on('pointerdown', jump);
+    function drawFallingObjects() {
+        ctx.fillStyle = '#f00';
+        for (const obj of fallingObjects) {
+            ctx.fillRect(obj.x, obj.y, obj.width, obj.height);
+        }
     }
 
     function update() {
-        if (isJumping) {
-            player.setVelocityY(-500);
-            isJumping = false;
-        }
-
-        obstacles.children.iterate((obstacle) => {
-            if (obstacle.x < -50) {
-                obstacle.x = 800;
-            }
+        // Move character based on touch input
+        canvas.addEventListener('touchmove', (event) => {
+            character.x = event.touches[0].clientX - character.width / 2;
+            // Prevent character from going out of the canvas
+            if (character.x < 0) character.x = 0;
+            if (character.x + character.width > canvas.width) character.x = canvas.width - character.width;
         });
-    }
 
-    function jump() {
-        if (player.body.touching.down) {
-            isJumping = true;
+        // Update falling objects
+        for (const obj of fallingObjects) {
+            obj.y += 5;
+            // Check for collision with character
+            if (
+                obj.x < character.x + character.width &&
+                obj.x + obj.width > character.x &&
+                obj.y < character.y + character.height &&
+                obj.y + obj.height > character.y
+            ) {
+                score++;
+                resetObject(obj);
+            }
+            // Remove objects that go beyond the canvas
+            if (obj.y > canvas.height) {
+                resetObject(obj);
+            }
         }
     }
 
-    function gameOver() {
-        alert("Game Over!");
-        location.reload(); // Reload the page for simplicity
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawCharacter();
+        drawFallingObjects();
+        document.getElementById('score').textContent = 'Score: ' + score;
     }
+
+    function resetObject(obj) {
+        obj.y = 0;
+        obj.x = Math.random() * (canvas.width - obj.width);
+    }
+
+    function spawnObjects() {
+        setInterval(() => {
+            const obj = {
+                x: Math.random() * (canvas.width - 30),
+                y: 0,
+                width: 30,
+                height: 30
+            };
+            fallingObjects.push(obj);
+        }, 1000);
+    }
+
+    function gameLoop() {
+        update();
+        draw();
+        requestAnimationFrame(gameLoop);
+    }
+
+    // Start the game loop and spawn falling objects
+    gameLoop();
+    spawnObjects();
 </script>
 
 </body>
