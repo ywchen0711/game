@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Touch Game</title>
+    <title>Geometry Dash</title>
     <style>
         body {
             margin: 0;
@@ -14,7 +14,7 @@
             display: block;
         }
 
-        #score {
+        #gameInfo {
             position: absolute;
             top: 10px;
             left: 10px;
@@ -25,87 +25,113 @@
 </head>
 <body>
 
-<canvas id="gameCanvas" width="400" height="600"></canvas>
-<div id="score">Score: 0</div>
+<canvas id="geometryDashCanvas" width="400" height="600"></canvas>
+<div id="gameInfo">Tap to Jump</div>
 
 <script>
-    const canvas = document.getElementById('gameCanvas');
+    const canvas = document.getElementById('geometryDashCanvas');
     const ctx = canvas.getContext('2d');
 
-    const character = {
-        x: canvas.width / 2,
-        y: canvas.height - 50,
-        width: 50,
-        height: 50,
-        speed: 5
+    const player = {
+        x: 50,
+        y: canvas.height / 2,
+        size: 20,
+        speed: 5,
+        jumping: false,
+        jumpHeight: 80
     };
 
-    const fallingObjects = [];
+    let obstacles = [];
     let score = 0;
 
-    function drawCharacter() {
+    function drawPlayer() {
         ctx.fillStyle = '#00f';
-        ctx.fillRect(character.x, character.y, character.width, character.height);
+        ctx.fillRect(player.x, player.y, player.size, player.size);
     }
 
-    function drawFallingObjects() {
+    function drawObstacles() {
         ctx.fillStyle = '#f00';
-        for (const obj of fallingObjects) {
-            ctx.fillRect(obj.x, obj.y, obj.width, obj.height);
+        for (const obstacle of obstacles) {
+            ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
         }
     }
 
     function update() {
-        // Move character based on touch input
-        canvas.addEventListener('touchmove', (event) => {
-            character.x = event.touches[0].clientX - character.width / 2;
-            // Prevent character from going out of the canvas
-            if (character.x < 0) character.x = 0;
-            if (character.x + character.width > canvas.width) character.x = canvas.width - character.width;
+        // Move player based on touch input
+        canvas.addEventListener('touchstart', () => {
+            if (!player.jumping) {
+                player.jumping = true;
+                jump();
+            }
         });
 
-        // Update falling objects
-        for (const obj of fallingObjects) {
-            obj.y += 5;
-            // Check for collision with character
-            if (
-                obj.x < character.x + character.width &&
-                obj.x + obj.width > character.x &&
-                obj.y < character.y + character.height &&
-                obj.y + obj.height > character.y
-            ) {
-                score++;
-                resetObject(obj);
+        // Update player position
+        if (player.jumping) {
+            player.y -= player.speed;
+            if (player.y <= canvas.height / 2 - player.jumpHeight) {
+                player.jumping = false;
             }
-            // Remove objects that go beyond the canvas
-            if (obj.y > canvas.height) {
-                resetObject(obj);
+        } else {
+            player.y += player.speed;
+        }
+
+        // Update obstacle positions
+        for (const obstacle of obstacles) {
+            obstacle.x -= player.speed;
+
+            // Check for collision with player
+            if (
+                player.x < obstacle.x + obstacle.width &&
+                player.x + player.size > obstacle.x &&
+                player.y < obstacle.y + obstacle.height &&
+                player.y + player.size > obstacle.y
+            ) {
+                alert('Game Over! Score: ' + score);
+                resetGame();
+            }
+
+            // Remove obstacles that go beyond the canvas
+            if (obstacle.x + obstacle.width < 0) {
+                score++;
+                resetObstacle(obstacle);
             }
         }
+
+        // Spawn new obstacles
+        if (Math.random() < 0.02) {
+            const obstacle = {
+                x: canvas.width,
+                y: canvas.height - player.size,
+                width: 20,
+                height: player.size
+            };
+            obstacles.push(obstacle);
+        }
+    }
+
+    function jump() {
+        setTimeout(() => {
+            player.jumping = false;
+        }, 300);
     }
 
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawCharacter();
-        drawFallingObjects();
-        document.getElementById('score').textContent = 'Score: ' + score;
+        drawPlayer();
+        drawObstacles();
+        document.getElementById('gameInfo').textContent = 'Score: ' + score;
     }
 
-    function resetObject(obj) {
-        obj.y = 0;
-        obj.x = Math.random() * (canvas.width - obj.width);
+    function resetObstacle(obstacle) {
+        obstacle.x = canvas.width;
+        obstacle.y = canvas.height - player.size;
     }
 
-    function spawnObjects() {
-        setInterval(() => {
-            const obj = {
-                x: Math.random() * (canvas.width - 30),
-                y: 0,
-                width: 30,
-                height: 30
-            };
-            fallingObjects.push(obj);
-        }, 1000);
+    function resetGame() {
+        player.y = canvas.height / 2;
+        player.jumping = false;
+        obstacles = [];
+        score = 0;
     }
 
     function gameLoop() {
@@ -114,9 +140,8 @@
         requestAnimationFrame(gameLoop);
     }
 
-    // Start the game loop and spawn falling objects
+    // Start the game loop
     gameLoop();
-    spawnObjects();
 </script>
 
 </body>
