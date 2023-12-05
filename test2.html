@@ -44,6 +44,9 @@
     let obstacles = [];
     let score = 0;
 
+    const groundHeight = 20;
+    const ceilingHeight = 20;
+
     function drawPlayer() {
         ctx.fillStyle = '#00f';
         ctx.fillRect(player.x, player.y, player.size, player.size);
@@ -64,11 +67,15 @@
         // Update player position
         if (player.jumping) {
             player.y -= player.speed;
-            if (player.y <= canvas.height / 2 - player.jumpHeight) {
+            if (player.y <= ceilingHeight) {
+                player.y = ceilingHeight;
                 player.jumping = false;
             }
         } else {
             player.y += player.speed;
+            if (player.y + player.size >= canvas.height - groundHeight) {
+                player.y = canvas.height - player.size - groundHeight;
+            }
         }
 
         // Update obstacle positions
@@ -117,11 +124,11 @@
     function drawGroundAndCeiling() {
         // Draw ground
         ctx.fillStyle = '#0f0';
-        ctx.fillRect(0, canvas.height - player.size, canvas.width, player.size);
-        
+        ctx.fillRect(0, canvas.height - groundHeight, canvas.width, groundHeight);
+
         // Draw ceiling
         ctx.fillStyle = '#0f0';
-        ctx.fillRect(0, 0, canvas.width, player.size);
+        ctx.fillRect(0, 0, canvas.width, ceilingHeight);
     }
 
     function draw() {
