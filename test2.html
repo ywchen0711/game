@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Geometry Dash</title>
+    <title>Shooting Game</title>
     <style>
         body {
             margin: 0;
@@ -25,129 +25,128 @@
 </head>
 <body>
 
-<canvas id="geometryDashCanvas" width="400" height="600"></canvas>
-<div id="gameInfo">Tap or Click to Jump</div>
+<canvas id="shootingGameCanvas" width="400" height="600"></canvas>
+<div id="gameInfo">Tap to Shoot</div>
 
 <script>
-    const canvas = document.getElementById('geometryDashCanvas');
+    const canvas = document.getElementById('shootingGameCanvas');
     const ctx = canvas.getContext('2d');
 
     const player = {
-        x: 50,
-        y: canvas.height / 2,
-        size: 20,
-        speed: 5,
-        jumping: false,
-        jumpHeight: 80
+        x: canvas.width / 2 - 25,
+        y: canvas.height - 50,
+        size: 50,
+        speed: 10
     };
 
-    let obstacles = [];
+    const projectiles = [];
+    const enemies = [];
     let score = 0;
-
-    const groundHeight = 20;
-    const ceilingHeight = 20;
 
     function drawPlayer() {
         ctx.fillStyle = '#00f';
         ctx.fillRect(player.x, player.y, player.size, player.size);
     }
 
-    function drawObstacles() {
+    function drawProjectiles() {
         ctx.fillStyle = '#f00';
-        for (const obstacle of obstacles) {
-            ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+        for (const projectile of projectiles) {
+            ctx.fillRect(projectile.x, projectile.y, projectile.width, projectile.height);
+        }
+    }
+
+    function drawEnemies() {
+        ctx.fillStyle = '#0f0';
+        for (const enemy of enemies) {
+            ctx.fillRect(enemy.x, enemy.y, enemy.size, enemy.size);
         }
     }
 
     function update() {
-        // Move player based on touch or click input
-        canvas.addEventListener('touchstart', jump);
-        canvas.addEventListener('click', jump);
+        // Move player based on touch input
+        canvas.addEventListener('touchstart', shoot);
 
-        // Update player position
-        if (player.jumping) {
-            player.y -= player.speed;
-            if (player.y <= ceilingHeight) {
-                player.y = ceilingHeight;
-                player.jumping = false;
+        // Update projectile positions
+        for (const projectile of projectiles) {
+            projectile.y -= projectile.speed;
+
+            // Remove projectiles that go beyond the canvas
+            if (projectile.y < 0) {
+                projectiles.splice(projectiles.indexOf(projectile), 1);
             }
-        } else {
-            player.y += player.speed;
-            if (player.y + player.size >= canvas.height - groundHeight) {
-                player.y = canvas.height - player.size - groundHeight;
+
+            // Check for collisions with enemies
+            for (const enemy of enemies) {
+                if (
+                    projectile.x < enemy.x + enemy.size &&
+                    projectile.x + projectile.width > enemy.x &&
+                    projectile.y < enemy.y + enemy.size &&
+                    projectile.y + projectile.height > enemy.y
+                ) {
+                    score++;
+                    enemies.splice(enemies.indexOf(enemy), 1);
+                    projectiles.splice(projectiles.indexOf(projectile), 1);
+                }
             }
         }
 
-        // Update obstacle positions
-        for (const obstacle of obstacles) {
-            obstacle.x -= player.speed;
+        // Update enemy positions
+        for (const enemy of enemies) {
+            enemy.y += enemy.speed;
 
-            // Check for collision with player
+            // Check for collisions with the player
             if (
-                player.x < obstacle.x + obstacle.width &&
-                player.x + player.size > obstacle.x &&
-                player.y < obstacle.y + obstacle.height &&
-                player.y + player.size > obstacle.y
+                player.x < enemy.x + enemy.size &&
+                player.x + player.size > enemy.x &&
+                player.y < enemy.y + enemy.size &&
+                player.y + player.size > enemy.y
             ) {
                 alert('Game Over! Score: ' + score);
                 resetGame();
             }
 
-            // Remove obstacles that go beyond the canvas
-            if (obstacle.x + obstacle.width < 0) {
-                score++;
-                resetObstacle(obstacle);
+            // Remove enemies that go beyond the canvas
+            if (enemy.y > canvas.height) {
+                enemies.splice(enemies.indexOf(enemy), 1);
             }
         }
 
-        // Spawn new obstacles
+        // Spawn new enemies
         if (Math.random() < 0.02) {
-            const obstacle = {
-                x: canvas.width,
-                y: ceilingHeight + Math.random() * (canvas.height - groundHeight - ceilingHeight - player.size),
-                width: 20,
-                height: player.size
+            const enemy = {
+                x: Math.random() * (canvas.width - 50),
+                y: 0,
+                size: 50,
+                speed: Math.random() * 2 + 1
             };
-            obstacles.push(obstacle);
+            enemies.push(enemy);
         }
     }
 
-    function jump() {
-        if (!player.jumping) {
-            player.jumping = true;
-            setTimeout(() => {
-                player.jumping = false;
-            }, 300);
-        }
-    }
-
-    function drawGroundAndCeiling() {
-        // Draw ground
-        ctx.fillStyle = '#0f0';
-        ctx.fillRect(0, canvas.height - groundHeight, canvas.width, groundHeight);
-
-        // Draw ceiling
-        ctx.fillStyle = '#0f0';
-        ctx.fillRect(0, 0, canvas.width, ceilingHeight);
+    function shoot(event) {
+        const projectile = {
+            x: player.x + player.size / 2 - 5,
+            y: player.y,
+            width: 10,
+            height: 20,
+            speed: 10
+        };
+        projectiles.push(projectile);
     }
 
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawGroundAndCeiling();
         drawPlayer();
-        drawObstacles();
+        drawProjectiles();
+        drawEnemies();
         document.getElementById('gameInfo').textContent = 'Score: ' + score;
     }
 
-    function resetObstacle(obstacle) {
-        obstacle.x = canvas.width;
-        obstacle.y = ceilingHeight + Math.random() * (canvas.height - groundHeight - ceilingHeight - player.size);
-    }
-
     function resetGame() {
-        player.y = canvas.height / 2;
-        player.jumping = false;
-        obstacles = [];
+        player.x = canvas.width / 2 - 25;
+        player.y = canvas.height - 50;
+        projectiles.length = 0;
+        enemies.length = 0;
         score = 0;
     }
 
