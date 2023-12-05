@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mario-like Game with Bombs and Coins</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="marioGameCanvas" width="1200" height="600"></canvas>
+
+<script>
+    const canvas = document.getElementById("marioGameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const players = [
+        { x: 50, y: canvas.height - 70, width: 40, height: 60, color: "pink", velocityX: 0, velocityY: 0, jumping: false, name: "Erin" }
+    ];
+
+    const platforms = [
+        { x: 0, y: canvas.height - 20, width: canvas.width, height: 20, color: "green" },
+        { x: 150, y: canvas.height - 150, width: 100, height: 10, color: "green" },
+        { x: 300, y: canvas.height - 250, width: 100, height: 10, color: "green" },
+        { x: 500, y: canvas.height - 350, width: 100, height: 10, color: "green" },
+        { x: 800, y: canvas.height - 150, width: 100, height: 10, color: "green" },
+        { x: 1000, y: canvas.height - 250, width: 100, height: 10, color: "green" }
+    ];
+
+    const bombs = [];
+    const coins = [];
+
+    let score = 0;
+
+    function drawPlayer(player) {
+        ctx.beginPath();
+        ctx.rect(player.x, player.y, player.width, player.height);
+        ctx.fillStyle = player.color;
+        ctx.fill();
+        ctx.closePath();
+
+        // Write the name on the block
+        ctx.font = "12px Arial";
+        ctx.fillStyle = "white";
+        ctx.fillText(player.name, player.x + player.width / 2 - ctx.measureText(player.name).width / 2, player.y + player.height / 2 + 5);
+    }
+
+    function drawPlatform(platform) {
+        ctx.beginPath();
+        ctx.rect(platform.x, platform.y, platform.width, platform.height);
+        ctx.fillStyle = platform.color;
+        ctx.fill();
+        ctx.closePath();
+    }
+
+    function drawPlatforms() {
+        platforms.forEach(drawPlatform);
+    }
+
+    function drawBomb(bomb) {
+        ctx.beginPath();
+        ctx.arc(bomb.x, bomb.y, bomb.radius, 0, Math.PI * 2);
+        ctx.fillStyle = "black";
+        ctx.fill();
+        ctx.closePath();
+    }
+
+    function drawBombs() {
+        bombs.forEach(drawBomb);
+    }
+
+    function drawCoin(coin) {
+        ctx.beginPath();
+        ctx.arc(coin.x, coin.y, coin.radius, 0, Math.PI * 2);
+        ctx.fillStyle = "yellow";
+        ctx.fill();
+        ctx.closePath();
+    }
+
+    function drawCoins() {
+        coins.forEach(drawCoin);
+    }
+
+    function updatePlayer(player) {
+        // Gravity
+        player.velocityY += 1;
+
+        // Update player position
+        player.x += player.velocityX;
+        player.y += player.velocityY;
+
+        // Check for collisions with platforms
+        platforms.forEach(function(platform) {
+            if (
+                player.x < platform.x + platform.width &&
+                player.x + player.width > platform.x &&
+                player.y < platform.y + platform.height &&
+                player.y + player.height > platform.y
+            ) {
+                // Player is on the platform
+                player.y = platform.y - player.height;
+                player.velocityY = 0;
+                player.jumping = false;
+            }
+        });
+
+        // Boundary check
+        if (player.x < 0) {
+            player.x = 0;
+        }
+
+        if (player.x + player.width > canvas.width) {
+            player.x = canvas.width - player.width;
+        }
+
+        if (player.y < 0) {
+            player.y = 0;
+            player.velocityY = 0;
+        }
+    }
+
+    function updateBombs() {
+        for (const bomb of bombs) {
+            bomb.y += 3; // Move bombs down
+
+            // Check for collisions with player
+            if (
+                players[0].x < bomb.x + bomb.radius &&
+                players[0].x + players[0].width > bomb.x - bomb.radius &&
+                players[0].y < bomb.y + bomb.radius &&
+                players[0].y + players[0].height > bomb.y - bomb.radius
+            ) {
+                endGame();
+            }
+
+            // Remove off-screen bombs
+            if (bomb.y - bomb.radius > canvas.height) {
+                bombs.shift(); // Remove the first bomb
+            }
+        }
+    }
+
+    function updateCoins() {
+        for (const coin of coins) {
+            coin.y += 2; // Move coins down
+
+            // Check for collisions with player
+            if (
+                players[0].x < coin.x + coin.radius &&
+                players[0].x + players[0].width > coin.x - coin.radius &&
+                players[0].y < coin.y + coin.radius &&
+                players[0].y + players[0].height > coin.y - coin.radius
+            ) {
+                score++;
+                coins.shift(); // Remove the collected coin
+            }
+
+            // Remove off-screen coins
+            if (coin.y - coin.radius > canvas.height) {
+                coins.shift(); // Remove the first coin
+            }
+        }
+    }
+
+    function drawScore() {
+        ctx.font = "20px Arial";
+        ctx.fillStyle = "black";
+        ctx.fillText("Score: " + score, 20, 30);
+    }
+
+    function endGame() {
+        ctx.font = "30px Arial";
+        ctx.fillStyle = "red";
+        ctx.fillText("Game Over!", canvas.width / 2 - 100, canvas.height / 2 - 15);
+        clearInterval(gameInterval);
+    }
+
+    function generateRandomBomb() {
+        const bombRadius = 15;
+        const bomb = {
+            x: Math.random() * (canvas.width - bombRadius * 2) + bombRadius,
+            y: 0,
+            radius: bombRadius
+        };
+
+        bombs.push(bomb);
+    }
+
+    function generateRandomCoin() {
+        const coinRadius = 10;
+        const platform = platforms[Math.floor(Math.random() * platforms.length)];
+
+        const coin = {
+            x: platform.x + Math.random() * (platform.width - coinRadius * 2) + coinRadius,
+            y: platform.y - coinRadius,
+            radius: coinRadius
+        };
+
+        coins.push(coin);
+    }
+
+    function gameLoop() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        drawPlatforms();
+        drawBombs();
+        drawCoins();
+
+        players.forEach(function(player) {
+            drawPlayer(player);
+            updatePlayer(player);
+        });
+
+        updateBombs();
+        updateCoins();
+        drawScore();
+
+        // Generate bombs randomly
+        if (Math.random() < 0.02) {
+            generateRandomBomb();
+        }
+
+        // Generate coins randomly
+        if (Math.random() < 0.01) {
+            generateRandomCoin();
+        }
+    }
+
+    document.addEventListener("keydown", function(event) {
+        if (event.key === "ArrowRight") {
+            players[0].velocityX = 5;
+        } else if (event.key === "ArrowLeft") {
+            players[0].velocityX = -5;
+        } else if (event.key === " ") {
+            jump(players[0]);
+        }
+    });
+
+    document.addEventListener("keyup", function(event) {
+        if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+            players[0].velocityX = 0;
+        }
+    });
+
+    document.addEventListener("touchstart", function(event) {
+        jump(players[0]);
+    });
+
+    function jump(player) {
+        if (!player.jumping) {
+            player.velocityY = -15;
+            player.jumping = true;
+        }
+    }
+
+    const gameInterval = setInterval(gameLoop, 20);
+</script>
+
+</body>
+</html>
