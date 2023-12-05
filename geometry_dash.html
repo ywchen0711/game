@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+    <title>Geometry Dash</title>
+</head>
+<body>
+
+<canvas id="geometryDashCanvas" width="800" height="400"></canvas>
+
+<script>
+    const canvas = document.getElementById("geometryDashCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const player = {
+        x: 50,
+        y: canvas.height / 2 - 15,
+        width: 30,
+        height: 30,
+        color: "blue",
+        velocity: 0,
+        jumpStrength: 5
+    };
+
+    const obstacles = [];
+
+    let score = 0;
+    let isGameOver = false;
+
+    function drawPlayer() {
+        ctx.beginPath();
+        ctx.rect(player.x, player.y, player.width, player.height);
+        ctx.fillStyle = player.color;
+        ctx.fill();
+        ctx.closePath();
+    }
+
+    function drawObstacle(obstacle) {
+        ctx.beginPath();
+        ctx.rect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+        ctx.fillStyle = obstacle.color;
+        ctx.fill();
+        ctx.closePath();
+    }
+
+    function drawObstacles() {
+        obstacles.forEach(drawObstacle);
+    }
+
+    function updatePlayer() {
+        player.y += player.velocity;
+        player.velocity += 0.2; // Gravity
+
+        // Prevent player from going below the ground
+        if (player.y > canvas.height - player.height) {
+            player.y = canvas.height - player.height;
+            player.velocity = 0;
+        }
+    }
+
+    function updateObstacles() {
+        for (const obstacle of obstacles) {
+            obstacle.x -= 5; // Move obstacles from right to left
+
+            // Check for collisions with player
+            if (
+                player.x < obstacle.x + obstacle.width &&
+                player.x + player.width > obstacle.x &&
+                player.y < obstacle.y + obstacle.height &&
+                player.y + player.height > obstacle.y
+            ) {
+                isGameOver = true;
+            }
+
+            // Remove off-screen obstacles
+            if (obstacle.x + obstacle.width < 0) {
+                score++;
+                obstacles.shift(); // Remove the first obstacle
+            }
+        }
+    }
+
+    function drawScore() {
+        ctx.font = "20px Arial";
+        ctx.fillStyle = "black";
+        ctx.fillText("Score: " + score, 20, 30);
+    }
+
+    function drawGameOver() {
+        ctx.font = "30px Arial";
+        ctx.fillStyle = "red";
+        ctx.fillText("Game Over!", canvas.width / 2 - 100, canvas.height / 2 - 15);
+    }
+
+    function generateRandomObstacle() {
+        const obstacleHeight = Math.random() * 200 + 20;
+        const position = Math.random() < 0.5 ? "upper" : "bottom";
+
+        let obstacle = {
+            x: canvas.width,
+            width: 30,
+            height: obstacleHeight,
+            color: "red"
+        };
+
+        if (position === "upper") {
+            obstacle.y = 0;
+        } else {
+            obstacle.y = canvas.height - obstacleHeight;
+        }
+
+        obstacles.push(obstacle);
+    }
+
+    function gameLoop() {
+        if (isGameOver) {
+            drawGameOver();
+            return;
+        }
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        drawPlayer();
+        drawObstacles();
+        drawScore();
+
+        updatePlayer();
+        updateObstacles();
+
+        // Generate obstacles randomly
+        if (Math.random() < 0.02) {
+            generateRandomObstacle();
+        }
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    function jump() {
+        if (!isGameOver) {
+            player.velocity = -player.jumpStrength;
+        }
+    }
+
+    document.addEventListener("keydown", function(event) {
+        if (event.key === " ") {
+            jump();
+        }
+    });
+
+    canvas.addEventListener("click", jump);
+    canvas.addEventListener("touchstart", jump);
+
+    gameLoop();
+</script>
+
+</body>
+</html>
