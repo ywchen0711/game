@@ -32,10 +32,10 @@
     const canvas = document.getElementById('shootingGameCanvas');
     const ctx = canvas.getContext('2d');
 
-    const player = {
-        x: canvas.width / 2 - 25,
-        y: canvas.height - 50,
-        size: 50,
+    const godzilla = {
+        x: canvas.width / 2 - 50,
+        y: canvas.height - 100,
+        size: 100,
         speed: 5
     };
 
@@ -45,9 +45,10 @@
 
     let isTouching = false;
 
-    function drawPlayer() {
+    function drawGodzilla() {
+        // Drawing Godzilla as a rectangle for simplicity
         ctx.fillStyle = '#00f';
-        ctx.fillRect(player.x, player.y, player.size, player.size);
+        ctx.fillRect(godzilla.x, godzilla.y, godzilla.size, godzilla.size);
     }
 
     function drawProjectiles() {
@@ -65,9 +66,9 @@
     }
 
     function update() {
-        // Move player based on touch input
+        // Move Godzilla based on touch input
         canvas.addEventListener('touchstart', startTouch);
-        canvas.addEventListener('touchmove', movePlayer);
+        canvas.addEventListener('touchmove', moveGodzilla);
         canvas.addEventListener('touchend', endTouch);
 
         // Auto shoot
@@ -103,12 +104,12 @@
         for (const enemy of enemies) {
             enemy.y += enemy.speed;
 
-            // Check for collisions with the player
+            // Check for collisions with Godzilla
             if (
-                player.x < enemy.x + enemy.size &&
-                player.x + player.size > enemy.x &&
-                player.y < enemy.y + enemy.size &&
-                player.y + player.size > enemy.y
+                godzilla.x < enemy.x + enemy.size &&
+                godzilla.x + godzilla.size > enemy.x &&
+                godzilla.y < enemy.y + enemy.size &&
+                godzilla.y + godzilla.size > enemy.y
             ) {
                 alert('Game Over! Score: ' + score);
                 resetGame();
@@ -140,25 +141,25 @@
         isTouching = false;
     }
 
-    function movePlayer(event) {
+    function moveGodzilla(event) {
         if (isTouching) {
             const touchX = event.touches[0].clientX;
             const touchY = event.touches[0].clientY;
 
-            // Move player based on touch position
-            player.x = touchX - player.size / 2;
-            player.y = touchY - player.size / 2;
+            // Move Godzilla based on touch position
+            godzilla.x = touchX - godzilla.size / 2;
+            godzilla.y = touchY - godzilla.size / 2;
 
-            // Ensure the player stays within the canvas
-            player.x = Math.max(0, Math.min(canvas.width - player.size, player.x));
-            player.y = Math.max(0, Math.min(canvas.height - player.size, player.y));
+            // Ensure Godzilla stays within the canvas
+            godzilla.x = Math.max(0, Math.min(canvas.width - godzilla.size, godzilla.x));
+            godzilla.y = Math.max(0, Math.min(canvas.height - godzilla.size, godzilla.y));
         }
     }
 
     function shoot() {
         const projectile = {
-            x: player.x + player.size / 2 - 5,
-            y: player.y,
+            x: godzilla.x + godzilla.size / 2 - 5,
+            y: godzilla.y,
             width: 10,
             height: 20,
             speed: 10
@@ -168,15 +169,15 @@
 
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawPlayer();
+        drawGodzilla();
         drawProjectiles();
         drawEnemies();
         document.getElementById('gameInfo').textContent = 'Score: ' + score;
     }
 
     function resetGame() {
-        player.x = canvas.width / 2 - 25;
-        player.y = canvas.height - 50;
+        godzilla.x = canvas.width / 2 - 50;
+        godzilla.y = canvas.height - 100;
         projectiles.length = 0;
         enemies.length = 0;
         score = 0;
