@@ -40,6 +40,8 @@
     const coins = [];
 
     let score = 0;
+    let touchStartX = 0;
+    let touchEndX = 0;
 
     function drawPlayer(player) {
         ctx.beginPath();
@@ -252,7 +254,28 @@
     });
 
     document.addEventListener("touchstart", function(event) {
-        jump(players[0]);
+        touchStartX = event.touches[0].clientX;
+    });
+
+    document.addEventListener("touchend", function(event) {
+        touchEndX = event.changedTouches[0].clientX;
+        handleSwipe();
+    });
+
+    function handleSwipe() {
+        const swipeDistance = touchEndX - touchStartX;
+
+        if (swipeDistance > 0) {
+            // Swipe right
+            players[0].velocityX = 5;
+        } else {
+            // Swipe left
+            players[0].velocityX = -5;
+        }
+    }
+
+    document.addEventListener("touchmove", function(event) {
+        event.preventDefault();
     });
 
     function jump(player) {
