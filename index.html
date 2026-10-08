@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>像素職棒模擬</title>
+<style>
+  :root {
+    --ink: #161616; --stone: #d6d6d6; --stone2: #c2c2c2; --stone3: #ededed;
+    --brick1: #a9a9a9; --brick2: #9c9c9c; --mortar: #8a8a8a;
+    --good: #2e9a3e; --bad: #c8382c; --gold: #c99a10;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; color: var(--ink);
+    font-family: "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", sans-serif;
+    background-color: var(--brick1);
+    background-image:
+      linear-gradient(var(--mortar) 2px, transparent 2px),
+      linear-gradient(90deg, var(--mortar) 2px, transparent 2px),
+      linear-gradient(90deg, var(--mortar) 2px, transparent 2px);
+    background-size: 64px 24px, 64px 48px, 64px 48px;
+    background-position: 0 0, 0 0, 32px 24px;
+  }
+  .panel {
+    background: var(--stone); border: 3px solid var(--ink);
+    box-shadow: inset 3px 3px 0 var(--stone3), inset -3px -3px 0 var(--stone2), 4px 4px 0 rgba(0,0,0,.35);
+    padding: 10px;
+  }
+  #app { max-width: 1500px; margin: 0 auto; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  header h1 { margin: 0 12px 0 0; font-size: 22px; letter-spacing: 2px; }
+  header h1 small { font-size: 13px; font-weight: normal; margin-left: 8px; color: #444; }
+  button, select {
+    font: inherit; font-weight: bold; font-size: 14px; color: var(--ink); cursor: pointer;
+    background: var(--stone3); border: 3px solid var(--ink); padding: 5px 12px;
+    box-shadow: inset -2px -2px 0 var(--stone2);
+  }
+  button:hover:not(:disabled) { background: #fff; }
+  button:active:not(:disabled) { box-shadow: inset 2px 2px 0 var(--stone2); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.primary { background: #ffe58a; }
+  .spacer { flex: 1; }
+  .main { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(330px, 1fr); gap: 12px; align-items: start; }
+  @media (max-width: 1000px) { .main { grid-template-columns: 1fr; } }
+  .left, .right { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  canvas#field { display: block; width: 100%; height: auto; image-rendering: pixelated; image-rendering: crisp-edges; background: #4a9f40; border: 3px solid var(--ink); }
+  .canvasWrap { padding: 6px; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  .line th, .line td { border: 2px solid var(--ink); text-align: center; padding: 3px 5px; background: var(--stone3); }
+  .line th { background: #333; color: #fff; }
+  .line td.tn { text-align: left; font-weight: bold; white-space: nowrap; }
+  .line td.tot { background: #fff4c8; font-weight: bold; }
+  .line td.cur { background: #fff; outline: 2px solid var(--gold); outline-offset: -4px; }
+  .chip { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--ink); vertical-align: -1px; margin-right: 5px; }
+  .scroller { overflow-x: auto; }
+
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 520px) { .cards { grid-template-columns: 1fr; } }
+  .card { background: var(--stone3); border: 2px solid var(--ink); padding: 8px; min-width: 0; }
+  .card h3 { margin: 0 0 2px; font-size: 15px; display: flex; align-items: center; gap: 6px; }
+  .card .sub { font-size: 12px; color: #444; margin-bottom: 6px; min-height: 16px; }
+  .card .today { font-size: 12px; margin-top: 6px; padding-top: 5px; border-top: 2px dashed #999; min-height: 18px; }
+  .bar { display: grid; grid-template-columns: 58px 1fr 26px; align-items: center; gap: 5px; font-size: 12px; margin: 2px 0; }
+  .bar .track { height: 9px; background: #555; border: 2px solid var(--ink); position: relative; }
+  .bar .fill { position: absolute; inset: 0 auto 0 0; }
+  .bar b { text-align: right; }
+  .role { font-size: 11px; background: var(--ink); color: #fff; padding: 1px 5px; }
+
+  .tabs { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+  .tabs button { padding: 4px 10px; font-size: 13px; }
+  .tabs button.on { background: #ffe58a; }
+  #log { height: 430px; overflow-y: auto; font-size: 13px; line-height: 1.55; background: var(--stone3); border: 2px solid var(--ink); padding: 6px 8px; }
+  #log div { padding: 1px 0; border-bottom: 1px dotted #bbb; }
+  #log .inning { font-weight: bold; background: #333; color: #fff; padding: 2px 6px; margin-top: 4px; }
+  #log .hr { color: #a8700a; font-weight: bold; }
+  #log .hit { color: var(--good); }
+  #log .k { color: #6a3fb0; }
+  #log .err { color: var(--bad); }
+  #log .change { color: #1c5fa8; font-weight: bold; }
+  #log .final { background: #ffe58a; font-weight: bold; padding: 4px 6px; }
+  .pane { display: none; }
+  .pane.on { display: block; }
+  .stat th, .stat td { border-bottom: 1px solid #aaa; padding: 3px 4px; text-align: center; white-space: nowrap; }
+  .stat th { background: #333; color: #fff; position: sticky; top: 0; }
+  .stat td.nm { text-align: left; }
+  .stat tr.out td { color: #777; }
+  .box { max-height: 470px; overflow: auto; background: var(--stone3); border: 2px solid var(--ink); }
+  .box h4 { margin: 8px 6px 4px; font-size: 14px; }
+  .g { display: inline-block; min-width: 28px; padding: 0 3px; font-weight: bold; border: 1px solid rgba(0,0,0,.4); }
+  .note { font-size: 12px; color: #333; margin: 6px 2px 0; }
+  .sel { display: flex; gap: 6px; margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="panel">
+    <h1>⚾ 像素職棒<small>能力值驅動的全自動模擬</small></h1>
+    <button id="btnPlay" class="primary">▶ 開始比賽</button>
+    <label>速度
+      <select id="speed">
+        <option value="0.5">0.5x</option><option value="1" selected>1x</option><option value="2">2x</option>
+        <option value="4">4x</option><option value="8">8x</option>
+      </select>
+    </label>
+    <button id="btnSim">⏭ 直接模擬到結束</button>
+    <button id="btnNext" disabled>下一場</button>
+    <span class="spacer"></span>
+    <span id="cloud" class="note" title="雲端存檔狀態">☁ 連線中…</span>
+    <button id="btnNew">🔄 重新組隊</button>
+  </header>
+
+  <div class="main">
+    <div class="left">
+      <div class="panel scroller"><table class="line" id="line"></table></div>
+      <div class="panel canvasWrap"><canvas id="field"></canvas></div>
+    </div>
+    <div class="right">
+      <div class="panel cards">
+        <div class="card" id="cardP"></div>
+        <div class="card" id="cardB"></div>
+      </div>
+      <div class="panel">
+        <div class="tabs">
+          <button data-tab="log" class="on">文字轉播</button>
+          <button data-tab="box">比賽數據</button>
+          <button data-tab="roster">球員名單 (26人)</button>
+        </div>
+        <div class="pane on" id="pane-log"><div id="log"></div></div>
+        <div class="pane" id="pane-box"><div class="box" id="box"></div></div>
+        <div class="pane" id="pane-roster">
+          <div class="sel" id="rosterSel"></div>
+          <div class="box" id="roster"></div>
+          <p class="note">打者能力：打擊(擊中率)、力量(擊球初速/仰角)、選球(揮棒判斷)、速度(跑壘/守備範圍)、守備(反應/接球/失誤率)、臂力(傳球速度)。投手能力：速球、變化球(球質)、控球(進壘率)、體力(用球數上限)。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  // ?seed=123 可重現同一場比賽
+  (function () { const m = /[?&]seed=(\d+)/.exec(location.search); if (!m) return; let a = +m[1];
+    Math.random = function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; })();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="account.js"></script>
+<script src="engine.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
