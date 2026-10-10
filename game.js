@@ -1,7 +1,7 @@
 // 畫面：像素球場、球員精靈、時間軸動畫播放與資訊面板
 (function () {
 'use strict';
-const { Game, makeMatch, POS_XY, BASE, FIELD, POS_CN, POS_SHORT, fence, newStats } = BB;
+const { Game, makeMatch, addStars, POS_XY, BASE, FIELD, POS_CN, POS_SHORT, fence, newStats } = BB;
 
 const W = 540, H = 480, OX = 270, OY = 445, S = 2;
 const DEG = Math.PI / 180;
@@ -408,6 +408,7 @@ function drawBanner() {
 // ---------------- 面板 ----------------
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const nm = p => esc(p.name) + (p.star ? ' <span class="star" title="明星球員">★</span>' : '');
 function addLog(items) {
   if (!items || !items.length) return;
   const L = $('log');
@@ -446,7 +447,7 @@ function refreshPanels() {
   const P = byId(sn.pitchers[defI]);
   const B = sn.pregame ? game.ts[0].lineup[0].p : byId(sn.batter);
   const lim = game.pLimit(P), st = clamp(1 - P.g.NP / lim, 0, 1) * 100;
-  $('cardP').innerHTML = `<h3><span class="chip" style="background:${P.team.bar}"></span>#${P.num} ${esc(P.name)} <span class="role">${POS_CN[P.role]}</span></h3>
+  $('cardP').innerHTML = `<h3><span class="chip" style="background:${P.team.bar}"></span>#${P.num} ${nm(P)} <span class="role">${POS_CN[P.role]}</span></h3>
     <div class="sub">${P.throws === 'R' ? '右投' : '左投'}｜${P.velo}km｜${P.pitches.join('、')}</div>
     ${bar('速球', P.r.fastball)}${bar('變化球', P.r.breaking)}${bar('控球', P.r.control)}${bar('體力', P.r.stamina)}
     ${bar('剩餘體力', st, st > 50 ? '#5ad06a' : st > 25 ? '#ffd23a' : '#ff5a4a')}
@@ -455,7 +456,7 @@ function refreshPanels() {
   const g = B.g;
   const line = g.AB || g.BB ? `${g.AB}打數${g.H}安打${g.HR ? ' ' + g.HR + '轟' : ''}${g.RBI ? ' ' + g.RBI + '打點' : ''}${g.BB ? ' ' + g.BB + '保送' : ''}${g.SO ? ' ' + g.SO + '三振' : ''}` : '本場首打席';
   const s = B.s, avg = s.AB ? (s.H / s.AB).toFixed(3).replace(/^0/, '') : '.---';
-  $('cardB').innerHTML = `<h3><span class="chip" style="background:${B.team.bar}"></span>#${B.num} ${esc(B.name)} <span class="role">${e ? POS_SHORT[e.pos] : POS_SHORT[B.pos]}</span></h3>
+  $('cardB').innerHTML = `<h3><span class="chip" style="background:${B.team.bar}"></span>#${B.num} ${nm(B)} <span class="role">${e ? POS_SHORT[e.pos] : POS_SHORT[B.pos]}</span></h3>
     <div class="sub">${B.bats === 'R' ? '右打' : '左打'}｜累計 打率${avg} ${s.HR}轟</div>
     ${bar('打擊', B.r.contact)}${bar('力量', B.r.power)}${bar('選球', B.r.eye)}${bar('速度', B.r.speed)}${bar('守備', B.r.defense)}${bar('臂力', B.r.arm)}
     <div class="today">本場：${line}</div>`;
@@ -498,12 +499,12 @@ function renderRoster() {
   let h = `<table class="stat"><tr><th>#</th><th>野手</th><th>位置</th><th>打</th><th>打擊</th><th>力量</th><th>選球</th><th>速度</th><th>守備</th><th>臂力</th><th>打率</th><th>轟</th></tr>`;
   for (const p of t.roster.filter(p => p.role === 'H')) {
     const s = p.s;
-    h += `<tr><td>${p.num}</td><td class="nm">${esc(p.name)}</td><td>${POS_SHORT[p.pos]}</td><td>${p.bats === 'R' ? '右' : '左'}</td>${cell(p.r.contact)}${cell(p.r.power)}${cell(p.r.eye)}${cell(p.r.speed)}${cell(p.r.defense)}${cell(p.r.arm)}<td>${s.AB ? (s.H / s.AB).toFixed(3).replace(/^0/, '') : '-'}</td><td>${s.HR}</td></tr>`;
+    h += `<tr><td>${p.num}</td><td class="nm">${nm(p)}</td><td>${POS_SHORT[p.pos]}</td><td>${p.bats === 'R' ? '右' : '左'}</td>${cell(p.r.contact)}${cell(p.r.power)}${cell(p.r.eye)}${cell(p.r.speed)}${cell(p.r.defense)}${cell(p.r.arm)}<td>${s.AB ? (s.H / s.AB).toFixed(3).replace(/^0/, '') : '-'}</td><td>${s.HR}</td></tr>`;
   }
   h += `</table><table class="stat" style="margin-top:8px"><tr><th>#</th><th>投手</th><th>角色</th><th>投</th><th>球速</th><th>速球</th><th>變化球</th><th>控球</th><th>體力</th><th>球種</th><th>防禦率</th><th>勝-敗-救</th></tr>`;
   for (const p of t.roster.filter(p => p.role !== 'H')) {
     const s = p.s, era = s.outs ? (s.pER * 27 / s.outs).toFixed(2) : '-';
-    h += `<tr><td>${p.num}</td><td class="nm">${esc(p.name)}</td><td>${POS_SHORT[p.role]}</td><td>${p.throws === 'R' ? '右' : '左'}</td><td>${p.velo}</td>${cell(p.r.fastball)}${cell(p.r.breaking)}${cell(p.r.control)}${cell(p.r.stamina)}<td style="font-size:11px">${p.pitches.join('、')}</td><td>${era}</td><td>${s.W}-${s.L}-${s.S}</td></tr>`;
+    h += `<tr><td>${p.num}</td><td class="nm">${nm(p)}</td><td>${POS_SHORT[p.role]}</td><td>${p.throws === 'R' ? '右' : '左'}</td><td>${p.velo}</td>${cell(p.r.fastball)}${cell(p.r.breaking)}${cell(p.r.control)}${cell(p.r.stamina)}<td style="font-size:11px">${p.pitches.join('、')}</td><td>${era}</td><td>${s.W}-${s.L}-${s.S}</td></tr>`;
   }
   $('roster').innerHTML = h + '</table>';
 }
@@ -536,7 +537,7 @@ document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
 
 // ---------------- 雲端存檔（account.js / Supabase） ----------------
 const STYLE_KEYS = ['name', 'hat', 'shirt', 'trim', 'pants', 'bar', 'city', 'full', 'rotation', 'W', 'L', 'T'];
-const PLAYER_KEYS = ['id', 'name', 'num', 'pos', 'role', 'bats', 'throws', 'r', 's', 'velo', 'pitches'];
+const PLAYER_KEYS = ['id', 'name', 'num', 'pos', 'role', 'bats', 'throws', 'r', 's', 'velo', 'pitches', 'star'];
 function serializeTeams() {
   return { v: 1, teams: teams.map(t => Object.assign(
     Object.fromEntries(STYLE_KEYS.map(k => [k, t[k]])),
@@ -562,7 +563,7 @@ async function cloudLoad() {
     await ensureLogin();
     const d = await loadGame();
     // 玩家還沒開打才套用存檔，避免中途換掉比賽
-    if (d && d.v === 1 && snap.pregame && !playing) { teams = restoreTeams(d); spriteCache.clear(); newGame(false); cloudStatus('☁ 已讀取存檔'); }
+    if (d && d.v === 1 && snap.pregame && !playing) { teams = addStars(restoreTeams(d)); spriteCache.clear(); newGame(false); cloudStatus('☁ 已讀取存檔'); }
     else if (!d) { await saveGame(serializeTeams()); cloudStatus('☁ 新玩家，已建立存檔'); }
     else cloudStatus('☁ 已連線');
   } catch (e) { console.warn('雲端連線失敗', e); cloudStatus('離線模式（無法連線雲端）'); }

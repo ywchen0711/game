@@ -98,10 +98,56 @@ function makeTeam(style, city) {
   for (const p of t.roster) { p.num = nums.splice(Math.floor(R() * nums.length), 1)[0]; p.team = t; }
   return t;
 }
+// ---------------- 明星球員 ----------------
+// 每場比賽一定會出現的四位超強球員，隨機分到兩隊的不同位置（先發打者、先發投手或終結者）
+const STARS = ['Josh Chen', 'Jasper Chen', 'Jeff Chen', 'Erin Lai'];
+const hi = (lo, top) => lo + R() * (top - lo);
+function genStar(name, slot) {
+  let r;
+  if (slot === 'SP' || slot === 'CL') {
+    r = { fastball: hi(93, 99), breaking: hi(92, 99), control: hi(90, 99), stamina: slot === 'SP' ? hi(92, 99) : hi(62, 75),
+      contact: hi(25, 40), power: hi(20, 40), eye: hi(25, 40), speed: hi(50, 70), defense: hi(80, 95), arm: hi(88, 99) };
+  } else {
+    r = { contact: hi(90, 99), power: hi(88, 99), eye: hi(88, 99), speed: hi(84, 99), defense: hi(86, 99), arm: hi(86, 99),
+      fastball: 10 + R() * 15, breaking: 10 + R() * 15, control: 10 + R() * 15, stamina: 10 + R() * 10 };
+    const a = ADJ[slot] || {};
+    for (const k in a) if (a[k] > 0) r[k] += a[k] * 0.3;          // 位置只加強項，不扣能力
+  }
+  const p = mkPlayer(slot, slot === 'SP' || slot === 'CL' ? slot : 'H', r);
+  p.name = name; p.star = true;
+  return p;
+}
+// 把明星放進球隊：每位明星挑一個還沒被佔走的位置，取代原本那位球員（背號沿用）
+function addStars(teams) {
+  const slots = [];
+  teams.forEach((t, ti) => {
+    ['C', '1B', '2B', 'SS', '3B', 'LF', 'CF', 'RF', 'DH'].forEach(pos => slots.push({ ti, pos }));
+    slots.push({ ti, pos: 'SP' }, { ti, pos: 'CL' });
+  });
+  for (const name of STARS) {
+    if (teams.some(t => t.roster.some(p => p.name === name))) continue;      // 存檔裡已經有了
+    const free = slots.filter(s => !teams[s.ti].roster.some(p => p.star && slotOf(teams[s.ti], p) === s.pos));
+    const s = pick(free), t = teams[s.ti];
+    let i;
+    if (s.pos === 'SP') {                                // 下一場先發的那位投手
+      const sps = t.roster.filter(p => p.role === 'SP');
+      i = t.roster.indexOf(sps[t.rotation % sps.length]);
+    } else if (s.pos === 'CL') i = t.roster.findIndex(p => p.role === 'CL');
+    else i = t.roster.findIndex((p, k) => k < 9 && p.pos === s.pos);
+    const old = t.roster[i], star = genStar(name, s.pos);
+    star.num = old.num; star.team = t;
+    t.roster[i] = star;
+  }
+  return teams;
+}
+function slotOf(t, p) {
+  if (p.role === 'SP' || p.role === 'CL') return p.role;
+  return p.pos;
+}
 function makeMatch() {
   const pool = TEAMS.slice(), cities = CITIES.slice();
   const take = a => a.splice(Math.floor(R() * a.length), 1)[0];
-  return [makeTeam(take(pool), take(cities)), makeTeam(take(pool), take(cities))];
+  return addStars([makeTeam(take(pool), take(cities)), makeTeam(take(pool), take(cities))]);
 }
 
 function buildLineup(team) {
@@ -905,7 +951,7 @@ class Game {
   }
 }
 
-const api = { Game, makeTeam, makeMatch, TEAMS, CITIES, POS_XY, BASE, FIELD, OF, POS_CN, POS_SHORT, fence, newStats };
+const api = { Game, makeTeam, makeMatch, addStars, STARS, TEAMS, CITIES, POS_XY, BASE, FIELD, OF, POS_CN, POS_SHORT, fence, newStats };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 root.BB = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
