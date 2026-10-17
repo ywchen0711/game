@@ -213,3 +213,15 @@ table.gear td { font-size: 13px; }
 .lootc p { margin: 0; font-size: 12px; color: var(--good); }
 .pager { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-top: 10px; }
 .pager button { min-width: 34px; }
+
+/* ---- lineup screen ---- */
+table.lineup td { padding: 3px 4px; }
+table.lineup .nw { white-space: nowrap; }
+.mini { font-family: "Courier New", monospace; font-size: 11px; color: var(--muted); white-space: nowrap; }
+.fit { font-size: 11px; font-weight: bold; white-space: nowrap; padding: 1px 5px; border: 1px solid; }
+.fit.nat { color: #4cd07a; border-color: #2a6a40; } .fit.alt { color: #6ad8ff; border-color: #2a5a7a; } .fit.bad { color: #ff7a6a; border-color: #7a2a2a; } .fit.dh { color: var(--muted); border-color: #3a4157; }
+table.roster td { font-size: 13px; padding: 4px 6px; }
+table.roster tr.in td { background: rgba(76,208,122,.07); }
+table.roster a { cursor: pointer; text-decoration: underline dotted; }
+table.roster small { color: var(--muted); }
+td small { font-size: 10px; }

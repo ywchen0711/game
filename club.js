@@ -75,14 +75,36 @@ function bon(inst) { if (!S || inst.uid == null) return null; return ITEMS.bonus
 const fs = (inst) => stats(inst, bon(inst)), fo = (inst) => ovr(inst, bon(inst));
 const hitters = () => S.cards.filter((i) => !isPitcher(i)), pitchers = () => S.cards.filter((i) => isPitcher(i));
 // the defensive value of a hitter at a position (out of position plays worse)
-function fitAt(inst, pos) { const c = card(inst), r = fs(inst); if (pos === 'DH') return r.contact * 0.5 + r.power * 0.5; return fo(inst) - (canPlay(c, pos) ? 0 : 12) + (pos === 'C' || pos === 'SS' || pos === 'CF' ? (r.defense - 50) * 0.2 : 0); }
-function autoLineup() {
-  const H = hitters().slice(), used = new Set(), field = {};
-  // fill the scarcest positions first
-  for (const pos of ['C', 'SS', 'CF', '2B', '3B', 'RF', 'LF', '1B', 'DH']) {
-    const best = H.filter((i) => !used.has(i.uid)).sort((a, b) => fitAt(b, pos) - fitAt(a, pos))[0];
-    if (best) { field[pos] = best.uid; used.add(best.uid); }
+// how much a hitter is worth at a position: bat + glove (weighted by how demanding the spot is); out of position is a last resort
+const POS_ORDER = ['C', '1B', '2B', 'SS', '3B', 'LF', 'CF', 'RF', 'SP', 'RP', 'CL'];
+const posRank = (i) => POS_ORDER.indexOf(card(i).pos);
+const hitVal = (r) => r.contact * 0.35 + r.power * 0.35 + r.eye * 0.15 + r.speed * 0.15;
+const DEFW = { C: 0.5, SS: 0.45, CF: 0.4, '2B': 0.35, '3B': 0.3, RF: 0.25, LF: 0.2, '1B': 0.12 };
+function slotValue(inst, pos, r = fs(inst)) { if (pos === 'DH') return hitVal(r); return hitVal(r) + (r.defense * 0.7 + r.arm * 0.3) * DEFW[pos] - (canPlay(card(inst), pos) ? 0 : 60); }
+// Hungarian algorithm (min cost, rows <= cols): the best way to fill all nine spots at once
+function hungarian(cost) {
+  const n = cost.length, m = cost[0].length, INF = 1e18, u = Array(n + 1).fill(0), v = Array(m + 1).fill(0), p = Array(m + 1).fill(0), way = Array(m + 1).fill(0);
+  for (let i = 1; i <= n; i++) {
+    p[0] = i; let j0 = 0; const minv = Array(m + 1).fill(INF), used = Array(m + 1).fill(false);
+    do {
+      used[j0] = true; const i0 = p[j0]; let delta = INF, j1 = 0;
+      for (let j = 1; j <= m; j++) if (!used[j]) {
+        const cur = cost[i0 - 1][j - 1] - u[i0] - v[j];
+        if (cur < minv[j]) { minv[j] = cur; way[j] = j0; }
+        if (minv[j] < delta) { delta = minv[j]; j1 = j; }
+      }
+      for (let j = 0; j <= m; j++) if (used[j]) { u[p[j]] += delta; v[j] -= delta; } else minv[j] -= delta;
+      j0 = j1;
+    } while (p[j0] !== 0);
+    do { const j1 = way[j0]; p[j0] = p[j1]; j0 = j1; } while (j0);
   }
+  const ans = Array(n).fill(-1); for (let j = 1; j <= m; j++) if (p[j]) ans[p[j] - 1] = j - 1; return ans;
+}
+function autoLineup() {
+  const H = hitters().slice(), used = new Set(), field = {}, R = new Map(H.map((i) => [i.uid, fs(i)]));
+  const m = Math.max(H.length, FPOS.length);
+  const cost = FPOS.map((pos) => Array.from({ length: m }, (_, j) => j < H.length ? -slotValue(H[j], pos, R.get(H[j].uid)) : 1e6));
+  hungarian(cost).forEach((j, k) => { if (j >= 0 && j < H.length) { field[FPOS[k]] = H[j].uid; used.add(H[j].uid); } });
   const nine = FPOS.filter((p) => field[p] != null).map((pos) => ({ uid: field[pos], pos }));
   // batting order: speed and contact up top, power in the middle
   const score = (o, f) => f(fs(instOf(o.uid)));
@@ -98,9 +120,13 @@ function autoLineup() {
   const P = pitchers().slice().sort((a, b) => fo(b) - fo(a));
   const sps = P.filter((i) => card(i).pos === 'SP').concat(P.filter((i) => card(i).pos !== 'SP')).slice(0, 5);
   const rest = P.filter((i) => !sps.includes(i));
-  const cl = rest.filter((i) => card(i).pos === 'CL')[0] || rest[0];
-  S.lineup = { order: order.filter(Boolean), bench: H.filter((i) => !used.has(i.uid)).sort((a, b) => fo(b) - fo(a)).slice(0, 6).map((i) => i.uid),
-    sp: sps.map((i) => i.uid), rp: rest.filter((i) => i !== cl).slice(0, 8).map((i) => i.uid), cl: cl ? cl.uid : null };
+  const cl = rest.filter((i) => card(i).pos === 'CL')[0] || rest.filter((i) => card(i).pos === 'RP')[0] || rest[0];
+  const rps = rest.filter((i) => i !== cl && card(i).pos !== 'SP').concat(rest.filter((i) => i !== cl && card(i).pos === 'SP')).slice(0, 8);
+  // bench: a backup catcher, an infielder and an outfielder first, then the best bats left
+  const left = H.filter((i) => !used.has(i.uid)).sort((a, b) => fo(b) - fo(a)), bench = [];
+  for (const ok of [(c) => canPlay(c, 'C'), (c) => ['2B', 'SS', '3B'].some((x) => canPlay(c, x)), (c) => ['LF', 'CF', 'RF'].some((x) => canPlay(c, x))]) { const b = left.find((i) => ok(card(i)) && !bench.includes(i)); if (b) bench.push(b); }
+  for (const i of left) if (bench.length < 6 && !bench.includes(i)) bench.push(i);
+  S.lineup = { order: order.filter(Boolean), bench: bench.map((i) => i.uid), sp: sps.map((i) => i.uid), rp: rps.map((i) => i.uid), cl: cl ? cl.uid : null };
 }
 function lineupProblems() {
   const L = S.lineup, out = [];
@@ -248,7 +274,7 @@ function endSeason() {
 
 // ---------------------------------------------------------------- screens
 let screen = 'home', dexFilter = 'all', plFilter = 'all', plSort = 'ovr', gearFilter = 'all';
-const PER = 60, pg = { pl: 0, dex: 0 };
+const PER = 60, pg = { pl: 0, dex: 0, ln: 0 };
 const pager = (n, key) => n <= PER ? '' : `<div class="pager">${Array.from({ length: Math.ceil(n / PER) }, (_, i) => `<button data-pg="${key}:${i}" class="${i === pg[key] ? 'on' : ''}">${i + 1}</button>`).join('')}</div>`;
 const page = (list, key) => { pg[key] = Math.min(pg[key], Math.max(0, Math.ceil(list.length / PER) - 1)); return list.slice(pg[key] * PER, pg[key] * PER + PER); };
 const bindPager = () => document.querySelectorAll('[data-pg]').forEach((b) => b.onclick = () => { const [k, i] = b.dataset.pg.split(':'); pg[k] = +i; render(); scrollTo(0, 0); });
@@ -363,19 +389,58 @@ function openBoxDlg(k) {
   drawPortraits();
   m.querySelector('#done').onclick = () => { closeModal(); render(); };
 }
+// where a player sits in the lineup right now
+function whereMap() {
+  const L = S.lineup, w = {};
+  L.order.forEach((o, k) => { w[o.uid] = `第${k + 1}棒・${PS[o.pos]}`; });
+  L.bench.forEach((u) => { w[u] = '板凳'; }); L.sp.forEach((u, k) => { w[u] = `先發${k + 1}`; }); L.rp.forEach((u) => { w[u] = '牛棚'; }); if (L.cl != null) w[L.cl] = '終結者';
+  return w;
+}
+const fitBadge = (c, pos) => pos === 'DH' ? '<span class="fit dh">DH</span>' : c.pos === pos ? '<span class="fit nat">✔ 本職</span>' : canPlay(c, pos) ? '<span class="fit alt">🔄 可守</span>' : '<span class="fit bad" title="非本職：守備 -15">⚠ 非本職</span>';
+const posTag = (c) => `${PS[c.pos]}${c.alt && c.alt.length ? `<small>/${c.alt.map((x) => PS[x]).join('/')}</small>` : ''}`;
+let lnSort = 'pos', lnFilter = 'all';
 function lineupHTML() {
-  const L = S.lineup, probs = lineupProblems(), H = hitters(), P = pitchers();
-  const opt = (list, sel, none) => (none ? `<option value="">（無）</option>` : '') + list.sort((a, b) => fo(b) - fo(a)).map((i) => `<option value="${i.uid}" ${i.uid === sel ? 'selected' : ''}>${esc(card(i).name)}｜${PS[card(i).pos]} ${fo(i)}</option>`).join('');
-  const posOpt = (sel) => FPOS.map((p) => `<option ${p === sel ? 'selected' : ''} value="${p}">${PS[p]}</option>`).join('');
+  const L = S.lineup, probs = lineupProblems(), H = hitters(), P = pitchers(), W = whereMap(), R = new Map(S.cards.map((i) => [i.uid, fs(i)]));
+  const lbl = (i) => `${card(i).name}｜${PS[card(i).pos]}${card(i).alt && card(i).alt.length ? '+' : ''} ${fo(i)}${W[i.uid] ? `（${W[i.uid]}）` : ''}`;
+  const o = (sel) => (i) => `<option value="${i.uid}" ${i.uid === sel ? 'selected' : ''}>${esc(lbl(i))}</option>`;
+  // hitters for a spot: the ones who can play it first (best fit on top), then everyone else by position
+  const hOpt = (sel, pos, none) => {
+    const fit = pos ? H.filter((i) => canPlay(card(i), pos)).sort((a, b) => slotValue(b, pos, R.get(b.uid)) - slotValue(a, pos, R.get(a.uid))) : [];
+    const rest = H.filter((i) => !fit.includes(i)).sort((a, b) => posRank(a) - posRank(b) || fo(b) - fo(a));
+    return (none ? '<option value="">（無）</option>' : '') + (fit.length ? `<optgroup label="${pos === 'DH' ? '指定打擊（依打擊能力）' : '可守' + PS[pos]}">${fit.map(o(sel)).join('')}</optgroup>` : '') + (rest.length ? `<optgroup label="${pos ? '其他野手' : '野手（依位置）'}">${rest.map(o(sel)).join('')}</optgroup>` : '');
+  };
+  const pOpt = (sel, role, none) => {
+    const roles = [role, ...['SP', 'RP', 'CL'].filter((x) => x !== role)];
+    return (none ? '<option value="">（無）</option>' : '') + roles.map((ro) => { const g = P.filter((i) => card(i).pos === ro).sort((a, b) => fo(b) - fo(a)); return g.length ? `<optgroup label="${PS[ro]}">${g.map(o(sel)).join('')}</optgroup>` : ''; }).join('');
+  };
+  const posOpt = (sel) => FPOS.map((x) => `<option ${x === sel ? 'selected' : ''} value="${x}">${PS[x]}</option>`).join('');
+  const mini = (i) => { const r = R.get(i.uid); return isPitcher(i) ? `<span class="mini">速${r.fastball} 變${r.breaking} 控${r.control} 體${r.stamina}</span>` : `<span class="mini">打${r.contact} 力${r.power} 速${r.speed} 守${r.defense}</span>`; };
+  const prow = (k, kind, sel, role) => { const i = sel != null ? instOf(sel) : null; return `<tr><td>${k + 1}</td><td><select data-${kind}="${k}">${pOpt(sel, role, true)}</select></td><td>${i ? mini(i) : ''}</td></tr>`; };
+  // the roster table: every player, sortable, with a one-click "put him here"
+  let list = lnFilter === 'H' ? H.slice() : lnFilter === 'P' ? P.slice() : S.cards.slice();
+  list.sort(lnSort === 'pos' ? (a, b) => posRank(a) - posRank(b) || fo(b) - fo(a) : lnSort === 'ovr' ? (a, b) => fo(b) - fo(a) : lnSort === 'lv' ? (a, b) => b.lv - a.lv || fo(b) - fo(a) : (a, b) => (W[a.uid] ? 0 : 1) - (W[b.uid] ? 0 : 1) || posRank(a) - posRank(b));
+  const putOpt = (i) => {
+    const nm = (u) => (u != null && instOf(u) ? card(instOf(u)).name : '空');
+    const opts = isPitcher(i)
+      ? [...[0, 1, 2, 3, 4].map((k) => [`sp:${k}`, `先發${k + 1}（${nm(L.sp[k])}）`]), ...[0, 1, 2, 3, 4, 5, 6, 7].map((k) => [`rp:${k}`, `牛棚${k + 1}（${nm(L.rp[k])}）`]), ['cl:0', `終結者（${nm(L.cl)}）`]]
+      : [...L.order.map((x, k) => [`ord:${k}`, `第${k + 1}棒・${PS[x.pos]}（${nm(x.uid)}）`]), ...[0, 1, 2, 3, 4, 5].map((k) => [`bench:${k}`, `板凳${k + 1}（${nm(L.bench[k])}）`])];
+    return `<select data-put="${i.uid}"><option value="">放到…</option>${opts.map(([v, t]) => `<option value="${v}">${esc(t)}</option>`).join('')}${W[i.uid] ? '<option value="out">移出陣容</option>' : ''}</select>`;
+  };
   return `<section class="panel"><div class="bar"><h3>陣容</h3><span class="grow"></span><button id="auto" class="big">⚡ 自動排陣</button></div>
     ${probs.length ? `<p class="bad">⚠ ${probs.join('、')}</p>` : '<p class="good">✔ 陣容完整</p>'}
-    <div class="cols"><div><h4>打線</h4><table class="box lineup">${L.order.map((o, k) => { const i = instOf(o.uid), off = !canPlay(card(i), o.pos);
-      return `<tr><td>${k + 1}</td><td><select data-ord="${k}">${opt(H.slice(), o.uid)}</select></td><td><select data-pos="${k}">${posOpt(o.pos)}</select></td><td>${off ? '<span class="bad" title="非本職守位：守備 -15">非本職</span>' : ''}</td>
-      <td><button data-up="${k}" ${k ? '' : 'disabled'}>▲</button><button data-dn="${k}" ${k < 8 ? '' : 'disabled'}>▼</button></td></tr>`; }).join('')}</table>
-      <h4>板凳（代打、代跑、守備替補）</h4><table class="box">${[0, 1, 2, 3, 4, 5].map((k) => `<tr><td>${k + 1}</td><td><select data-bench="${k}">${opt(H.slice(), L.bench[k], true)}</select></td></tr>`).join('')}</table></div>
-    <div><h4>先發輪值</h4><table class="box">${[0, 1, 2, 3, 4].map((k) => `<tr><td>${k + 1}</td><td><select data-sp="${k}">${opt(P.slice(), L.sp[k], true)}</select></td></tr>`).join('')}</table>
-      <h4>牛棚</h4><table class="box">${[0, 1, 2, 3, 4, 5, 6, 7].map((k) => `<tr><td>${k + 1}</td><td><select data-rp="${k}">${opt(P.slice(), L.rp[k], true)}</select></td></tr>`).join('')}</table>
-      <h4>終結者</h4><select data-cl="1">${opt(P.slice(), L.cl, true)}</select></div></div></section>`;
+    <div class="cols"><div><h4>打線 <small class="muted">下拉選單裡「可守該位置」的球員排在最前面</small></h4><table class="box lineup">${L.order.map((x, k) => { const i = instOf(x.uid);
+      return `<tr><td>${k + 1}</td><td><select data-pos="${k}">${posOpt(x.pos)}</select></td><td><select data-ord="${k}">${hOpt(x.uid, x.pos)}</select></td><td>${fitBadge(card(i), x.pos)}</td><td>${mini(i)}</td>
+      <td class="nw"><button data-up="${k}" ${k ? '' : 'disabled'}>▲</button><button data-dn="${k}" ${k < 8 ? '' : 'disabled'}>▼</button></td></tr>`; }).join('')}</table>
+      <h4>板凳（代打、代跑、守備替補）</h4><table class="box lineup">${[0, 1, 2, 3, 4, 5].map((k) => { const i = L.bench[k] != null ? instOf(L.bench[k]) : null; return `<tr><td>${k + 1}</td><td><select data-bench="${k}">${hOpt(L.bench[k], null, true)}</select></td><td>${i ? posTag(card(i)) : ''}</td><td>${i ? mini(i) : ''}</td></tr>`; }).join('')}</table></div>
+    <div><h4>先發輪值</h4><table class="box lineup">${[0, 1, 2, 3, 4].map((k) => prow(k, 'sp', L.sp[k], 'SP')).join('')}</table>
+      <h4>牛棚</h4><table class="box lineup">${[0, 1, 2, 3, 4, 5, 6, 7].map((k) => prow(k, 'rp', L.rp[k], 'RP')).join('')}</table>
+      <h4>終結者</h4><table class="box lineup">${prow(0, 'cl', L.cl, 'CL')}</table></div></div></section>
+    <section class="panel"><div class="bar"><h3>球員名單 <small class="muted">${list.length} 人・用「放到…」直接排進陣容</small></h3><span class="grow"></span>
+      ${[['all', '全部'], ['H', '野手'], ['P', '投手']].map(([k, l]) => `<button data-lf="${k}" class="${lnFilter === k ? 'on' : ''}">${l}</button>`).join('')}
+      <select id="lnsort">${[['pos', '依位置'], ['ovr', '依能力'], ['lv', '依等級'], ['use', '已登錄優先']].map(([k, l]) => `<option value="${k}" ${lnSort === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+    <table class="box roster"><tr><th>位置</th><th>球員</th><th>能力</th><th>主要數值</th><th>特色</th><th>目前</th><th></th></tr>
+    ${page(list, 'ln').map((i) => { const c = card(i); return `<tr class="${W[i.uid] ? 'in' : ''}"><td>${posTag(c)}</td><td><b class="r-${c.rarity}">${c.rarity}</b> <a data-pd="${i.uid}">${esc(c.name)}</a> <small class="muted">Lv${i.lv}</small></td><td><b>${fo(i)}</b></td><td>${mini(i)}</td>
+      <td>${(c.traits || []).map((t) => `<span title="${TRAITS[t].name}">${TRAITS[t].icon}</span>`).join('')}</td><td>${W[i.uid] || '<span class="muted">—</span>'}</td><td>${putOpt(i)}</td></tr>`; }).join('')}</table>${pager(list.length, 'ln')}</section>`;
 }
 function playersHTML() {
   let list = S.cards.slice();
@@ -406,23 +471,40 @@ const bind = {
     document.querySelectorAll('[data-box]').forEach((b) => b.onclick = () => { const k = b.dataset.box; if (S.coins < BOXES[k].cost) return; S.coins -= BOXES[k].cost; openBoxDlg(k); });
     document.querySelectorAll('[data-buy]').forEach((b) => b.onclick = () => { const k = b.dataset.buy; if (S.coins < PACKS[k].cost) return; S.coins -= PACKS[k].cost; doOpen(k); }); },
   lineup() {
-    const L = S.lineup, swapInto = (uid, put) => {             // a player can only be in one spot: take him out of the old one
-      const o = L.order.find((x) => x.uid === uid); if (o) o.uid = put;
-      const kb = L.bench.indexOf(uid); if (kb >= 0) L.bench[kb] = put;
-      const ks = L.sp.indexOf(uid); if (ks >= 0) L.sp[ks] = put;
-      const kr = L.rp.indexOf(uid); if (kr >= 0) L.rp[kr] = put;
-      if (L.cl === uid) L.cl = put;
-    };
+    const L = S.lineup;
     const tidy = () => { L.bench = L.bench.filter((x) => x != null); L.sp = L.sp.filter((x) => x != null); L.rp = L.rp.filter((x) => x != null); save(); render(); };
-    $('#auto').onclick = () => { autoLineup(); save(); render(); };
-    document.querySelectorAll('[data-ord]').forEach((s) => s.onchange = () => { const k = +s.dataset.ord, uid = +s.value, old = L.order[k].uid; swapInto(uid, old); L.order[k].uid = uid; tidy(); });
+    // put a player into a spot; whoever was there takes his old spot (or leaves the lineup)
+    const put = (kind, k, uid) => {
+      const old = kind === 'ord' ? L.order[k].uid : kind === 'cl' ? L.cl : L[kind][k] ?? null;
+      if (uid === old) return;
+      const inOrder = uid != null && L.order.some((x) => x.uid === uid);
+      if (inOrder && old == null) return toast('打線不能空著：請改放到有人的位置，或在打線直接換人');
+      if (uid != null) {
+        const o = L.order.find((x) => x.uid === uid); if (o) o.uid = old;
+        for (const a of ['bench', 'sp', 'rp']) { const j = L[a].indexOf(uid); if (j >= 0) L[a][j] = old; }
+        if (L.cl === uid) L.cl = old;
+      }
+      if (kind === 'ord') L.order[k].uid = uid; else if (kind === 'cl') L.cl = uid; else L[kind][k] = uid;
+      tidy();
+    };
+    $('#auto').onclick = () => { autoLineup(); save(); render(); toast('已依位置與能力自動排好陣容'); };
+    document.querySelectorAll('[data-ord]').forEach((s) => s.onchange = () => put('ord', +s.dataset.ord, +s.value));
     document.querySelectorAll('[data-pos]').forEach((s) => s.onchange = () => { const k = +s.dataset.pos, p = s.value, other = L.order.find((o, j) => j !== k && o.pos === p); if (other) other.pos = L.order[k].pos; L.order[k].pos = p; tidy(); });
     document.querySelectorAll('[data-up]').forEach((b) => b.onclick = () => { const k = +b.dataset.up; [L.order[k - 1], L.order[k]] = [L.order[k], L.order[k - 1]]; tidy(); });
     document.querySelectorAll('[data-dn]').forEach((b) => b.onclick = () => { const k = +b.dataset.dn; [L.order[k + 1], L.order[k]] = [L.order[k], L.order[k + 1]]; tidy(); });
-    for (const [attr, arr] of [['bench', 'bench'], ['sp', 'sp'], ['rp', 'rp']]) document.querySelectorAll(`[data-${attr}]`).forEach((s) => s.onchange = () => {
-      const k = +s.dataset[attr], uid = s.value === '' ? null : +s.value, old = L[arr][k] ?? null;
-      if (uid != null) swapInto(uid, old); L[arr][k] = uid; tidy(); });
-    const c = document.querySelector('[data-cl]'); c.onchange = () => { const uid = c.value === '' ? null : +c.value; if (uid != null) swapInto(uid, L.cl); L.cl = uid; tidy(); };
+    for (const kind of ['bench', 'sp', 'rp', 'cl']) document.querySelectorAll(`[data-${kind}]`).forEach((s) => s.onchange = () => put(kind, +s.dataset[kind], s.value === '' ? null : +s.value));
+    document.querySelectorAll('[data-put]').forEach((s) => s.onchange = () => {
+      const uid = +s.dataset.put;
+      if (s.value === 'out') {
+        if (L.order.some((x) => x.uid === uid)) { toast('打線不能空著：請先換另一位球員上場'); return render(); }
+        for (const a of ['bench', 'sp', 'rp']) L[a] = L[a].filter((x) => x !== uid); if (L.cl === uid) L.cl = null; return tidy();
+      }
+      const [kind, k] = s.value.split(':'); put(kind, +k, uid);
+    });
+    document.querySelectorAll('[data-lf]').forEach((b) => b.onclick = () => { lnFilter = b.dataset.lf; pg.ln = 0; render(); });
+    $('#lnsort').onchange = (e) => { lnSort = e.target.value; pg.ln = 0; render(); };
+    document.querySelectorAll('[data-pd]').forEach((a) => a.onclick = () => playerDialog(instOf(+a.dataset.pd)));
+    bindPager();
   },
   items() {
     document.querySelectorAll('[data-staff]').forEach((s) => s.onchange = () => { const k = s.dataset.staff; if (s.value === '') delete S.staff[k]; else S.staff[k] = +s.value; save(); render(); });
@@ -652,5 +734,5 @@ migrate();
 if (S && !S.league) newSeason(0);
 render();
 cloudInit();
-window.__club = { get S() { return S; }, render, openBoxDlg, fo, endSeason, playerDialog, cupEnter, playCup, CUPS, newClub, doOpen, playMatch, afterGame, setScreen: (k) => { screen = k; render(); } };
+window.__club = { get S() { return S; }, render, autoLineup, lineupProblems, openBoxDlg, fo, endSeason, playerDialog, cupEnter, playCup, CUPS, newClub, doOpen, playMatch, afterGame, setScreen: (k) => { screen = k; render(); } };
 })();
