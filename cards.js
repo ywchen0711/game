@@ -75,6 +75,8 @@ const PACKS = {
   std:     { name: '標準球員包', desc: '5 張球員卡', cost: 500, n: 5, odds: { N: 57.82, R: 29, SR: 9.5, SSR: 3, UR: 0.5, LR: 0.15, EX: 0.03 } },
   premium: { name: '高級球員包', desc: '5 張，保證至少 1 張 SR 以上', cost: 1500, n: 5, odds: { N: 0, R: 53.32, SR: 32, SSR: 12, UR: 2, LR: 0.6, EX: 0.08 }, guarantee: 'SR' },
   pitch:   { name: '投手專門包', desc: '5 張投手卡', cost: 900, n: 5, odds: { N: 39.66, R: 36, SR: 17, SSR: 6, UR: 1, LR: 0.3, EX: 0.04 }, filter: (c) => c.role !== 'H' },
+  star:    { name: '明星球員包', desc: '盃賽獎品：5 張，保證至少 1 張 SSR 以上', reward: true, n: 5, odds: { SR: 55, SSR: 33, UR: 9, LR: 2.7, EX: 0.3 }, guarantee: 'SSR' },
+  legend:  { name: '傳說球員包', desc: '盃賽獎品：5 張，保證至少 1 張 UR 以上', reward: true, n: 5, odds: { SSR: 60, UR: 30, LR: 9, EX: 1 }, guarantee: 'UR' },
   bat:     { name: '野手專門包', desc: '5 張野手卡', cost: 900, n: 5, odds: { N: 39.66, R: 36, SR: 17, SSR: 6, UR: 1, LR: 0.3, EX: 0.04 }, filter: (c) => c.role === 'H' },
 };
 const PITY = 30;            // every 30 packs without an SSR+, the next card is SSR or better
