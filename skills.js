@@ -1,5 +1,5 @@
-// 技能：200 種特殊能力。每張卡拿到時隨機賦予（稀有度越高，技能越多、越強），比賽中依情境發動、提升能力值。
-// 銅（一般）、銀（+）、金（專屬名稱）三階 × 60 系列 = 180 種，加上 20 種傳說技能（含 4 位隱藏球員的專屬技能）。
+// 技能：200 種特殊能力，完全隨機賦予（不綁定球員；稀有度只決定技能數量），比賽中依情境發動、提升能力值。
+// 銅（一般）、銀（+）、金（專屬名稱）三階 × 60 系列 = 180 種，加上 20 種傳說技能。
 (function (root) {
 'use strict';
 // conditions, from the player's own team's point of view
@@ -62,15 +62,15 @@ const PF = [
   ['trail', ['fastball', 'breaking'], '逆境投球', '逆境鬥魂', 0.9], ['tied', ['breaking', 'control'], '均勢投手', '膠著戰之王', 0.9], ['full', ['control'], '冷靜', '冷靜沉著', 1.3],
   ['vsPow', ['breaking'], '強打剋星', '屠龍者', 1.2], ['bigLead', ['control', 'stamina'], '餘裕', '王者餘裕', 1],
 ];
-// legend skills: [id key, who, cond, {stat: bonus}, name, hidden-only]
+// legend skills: [who, cond, {stat: bonus}, name]
 const LEG = [
   ['H', 'always', { contact: 6, eye: 6 }, '天才打者'], ['H', 'always', { power: 10 }, '怪力無雙'], ['H', 'always', { contact: 4, power: 4, speed: 4, defense: 4, arm: 4 }, '五拍子'],
   ['H', 'risp', { contact: 10, power: 10 }, '打點王'], ['H', 'walkoff', { contact: 14, power: 14 }, '再見英雄'], ['H', 'close', { contact: 9, power: 9, eye: 9 }, '大舞台'],
   ['H', 'always', { eye: 12 }, '神之眼'], ['H', 'runner', { speed: 18 }, '盜壘之神'], ['H', 'always', { defense: 12, arm: 8 }, '守備之神'], ['H', 'two', { contact: 10, eye: 10 }, '不動之心'],
   ['P', 'always', { fastball: 8, breaking: 6 }, '怪物投手'], ['P', 'always', { control: 12 }, '精密之神'], ['P', 'always', { stamina: 16 }, '無限體力'],
   ['P', 'two', { fastball: 10, breaking: 10 }, '奪三振王'], ['P', 'risp', { fastball: 10, breaking: 10, control: 10 }, '危機之神'], ['P', 'empty', { fastball: 7, control: 9 }, '完全支配'],
-  ['H', 'always', { speed: 10, defense: 10, contact: 5 }, '閃電中外', 'Josh Chen'], ['H', 'always', { contact: 8, eye: 8, defense: 8 }, '全能遊擊', 'Jasper Chen'],
-  ['P', 'always', { fastball: 8, breaking: 8, stamina: 10 }, '不敗王牌', 'Jeff Chen'], ['P', 'late', { fastball: 12, breaking: 12, control: 8 }, '終結女王', 'Erin Lai'],
+  ['H', 'always', { speed: 10, defense: 10, contact: 5 }, '閃電'], ['H', 'always', { contact: 8, eye: 8, defense: 8 }, '全能戰士'],
+  ['P', 'always', { fastball: 8, breaking: 8, stamina: 10 }, '不敗王牌'], ['P', 'late', { fastball: 12, breaking: 12, control: 8 }, '終結者之魂'],
 ];
 const GRADE = [null, { name: '銅', val: 4, color: '#c98a4a' }, { name: '銀', val: 7, color: '#c8d2e6' }, { name: '金', val: 11, color: '#ffc83a' }, { name: '傳說', val: 0, color: '#ff6ad5' }];
 const LIST = [];
@@ -81,29 +81,21 @@ for (const [who, fams] of [['H', HF], ['P', PF]]) fams.forEach(([cond, stats, br
     LIST.push({ id: LIST.length + 1, who, fam: who + fi, grade: g, cond, fx, name: g === 1 ? bronze : g === 2 ? bronze + '+' : gold });
   }
 });
-LEG.forEach(([who, cond, fx, name, owner]) => LIST.push({ id: LIST.length + 1, who, fam: 'L' + LIST.length, grade: 4, cond, fx, name, owner: owner || null }));
+LEG.forEach(([who, cond, fx, name]) => LIST.push({ id: LIST.length + 1, who, fam: 'L' + LIST.length, grade: 4, cond, fx, name }));
 const BY_ID = Object.fromEntries(LIST.map((s) => [s.id, s]));
 const desc = (s) => `${COND[s.cond][0]}：${Object.entries(s.fx).map(([k, v]) => `${ST[k]} +${v}`).join('、')}`;
 
-// how many skills and how good, by rarity
-const ROLL = {
-  N: { n: 1, w: [85, 15, 0, 0] }, R: { n: 1, w: [62, 32, 6, 0] }, SR: { n: 2, w: [45, 40, 15, 0] }, SSR: { n: 2, w: [28, 45, 25, 2] },
-  UR: { n: 3, w: [12, 43, 39, 6] }, LR: { n: 3, w: [0, 35, 52, 13] }, EX: { n: 3, w: [0, 20, 60, 20] },
-};
-// one more random skill a player doesn't already have (no two grades of the same family)
+// how many skills a card starts with (rarity only sets the count; which skills is pure luck)
+const ROLL = { N: { n: 1 }, R: { n: 1 }, SR: { n: 2 }, SSR: { n: 2 }, UR: { n: 3 }, LR: { n: 3 }, EX: { n: 4 } };
+// one more completely random skill (hitter skills for hitters, pitcher skills for pitchers; never two of the same family)
 function rollOne(card, have, R = Math.random) {
-  const who = card.role === 'H' ? 'H' : 'P', w = ROLL[card.rarity].w, tot = w.reduce((a, b) => a + b, 0);
-  let x = R() * tot, g = 1; for (let k = 0; k < 4; k++) { x -= w[k]; if (x < 0) { g = k + 1; break; } }
-  const fams = new Set(have.map((id) => BY_ID[id].fam));
-  let list = LIST.filter((s) => s.who === who && s.grade === g && !s.owner && !fams.has(s.fam));
-  if (!list.length) list = LIST.filter((s) => s.who === who && !s.owner && !fams.has(s.fam));
+  const who = card.role === 'H' ? 'H' : 'P', fams = new Set(have.map((id) => BY_ID[id].fam));
+  const list = LIST.filter((s) => s.who === who && !fams.has(s.fam));
   return list.length ? list[Math.floor(R() * list.length)].id : null;
 }
-// the starting skill set for a new card (hidden players always carry their signature skill)
-function rollSet(card, R = Math.random) {
-  const out = [], sig = LIST.find((s) => s.owner === card.name);
-  if (sig) out.push(sig.id);
-  for (let i = 0; i < ROLL[card.rarity].n; i++) { const id = rollOne(card, out, R); if (id) out.push(id); }
+function rollSet(card, R = Math.random, n = ROLL[card.rarity].n) {
+  const out = [];
+  for (let i = 0; i < n; i++) { const id = rollOne(card, out, R); if (id) out.push(id); }
   return out;
 }
 // CPU players: a few skills scaled to the league level (0..4)

@@ -2,7 +2,7 @@
 // 存檔放在 localStorage（雲端同步用大廳共用的 /save.js）。
 (function () {
 'use strict';
-const { RARITY, ORDER, POOL, BY_CID, PACKS, PITY, openPack, stats, ovr, gainXp, xpNeed, addCard, ensureSkills, STAR_MAX, isPitcher } = CARDS;
+const { RARITY, ORDER, POOL, BY_CID, PACKS, PITY, openPack, stats, ovr, gainXp, xpNeed, addCard, ensureSkills, rerolls, LV_MAX, STAR_MAX, isPitcher } = CARDS;
 const SK = SKILLS.BY_ID, GR = SKILLS.GRADE;
 const EXS = POOL.filter((c) => c.rarity === 'EX');
 const { makeTeam, TEAMS, CITIES, newStats, POS_CN, POS_SHORT } = BB;
@@ -253,7 +253,7 @@ function cardHTML(c, inst, opts = {}) {
     <div class="pn">${hidden ? (c.rarity === 'EX' ? '隱藏球員' : '？？？') : esc(c.name)}</div>
     <div class="pp"><b>${hidden && c.rarity === 'EX' ? '？？' : PS[c.pos]}</b> ${hidden ? '' : `<span class="ov">${o}</span>`}</div>
     ${inst && inst.sk && inst.sk.length ? `<div class="sks">${inst.sk.map((id) => `<i style="background:${GR[SK[id].grade].color}" title="${SK[id].name}"></i>`).join('')}</div>` : ''}
-    ${inst ? `<div class="pl">Lv${inst.lv} ${'★'.repeat(inst.stars)}<i><u style="width:${inst.lv >= RARITY[c.rarity].cap ? 100 : inst.xp / xpNeed(inst.lv) * 100}%"></u></i></div>` : ''}
+    ${inst ? `<div class="pl">Lv${inst.lv} ${'★'.repeat(inst.stars)}<i><u style="width:${inst.lv >= LV_MAX ? 100 : inst.xp / xpNeed(inst.lv) * 100}%"></u></i></div>` : ''}
   </div>`;
 }
 function drawPortraits() {
@@ -400,28 +400,26 @@ function doOpen(kind, free, first) {
   m.querySelector('#flipAll').onclick = () => flips.forEach((f) => f.classList.add('open'));
   m.querySelector('#done').onclick = () => { clearInterval(t); closeModal(); render(); };
 }
-const REROLL = 1000;
 function playerDialog(inst) {
   const c = card(inst), r = stats(inst), rar = RARITY[c.rarity], keys = c.role === 'H' ? [['contact', '打擊'], ['power', '力量'], ['eye', '選球'], ['speed', '速度'], ['defense', '守備'], ['arm', '臂力']] : [['fastball', '速球'], ['breaking', '變化球'], ['control', '控球'], ['stamina', '體力']];
   const st = inst.st, line = !st ? '還沒有出賽紀錄' : c.role === 'H' ? `${st.AB} 打數 ${st.H} 安打（打率 ${st.AB ? (st.H / st.AB).toFixed(3).replace(/^0/, '') : '.---'}）${st.HR} 轟 ${st.RBI} 打點` : `${Math.floor(st.outs / 3)}.${st.outs % 3} 局 ${st.pSO} 三振 防禦率 ${st.outs ? (st.pER * 27 / st.outs).toFixed(2) : '-'} ${st.W} 勝 ${st.L} 敗 ${st.S} 救援`;
-  const maxed = inst.lv >= rar.cap, inUse = isUsed(inst.uid);
+  const maxed = inst.lv >= LV_MAX, inUse = isUsed(inst.uid);
   const m = modal(`<div class="pd">${cardHTML(c, inst, { cls: 'big' })}<div><h2>${esc(c.name)} <small class="r-${c.rarity}">${c.rarity}</small></h2>
     <p class="muted">${POS_CN[c.pos]}｜${c.role === 'H' ? (c.bats === 'R' ? '右打' : '左打') : (c.throws === 'R' ? '右投' : '左投') + ' ' + (c.velo || '') + 'km ' + (c.pitches || []).join('、')}｜能力 ${ovr(inst)}</p>
-    ${keys.map(([k, l]) => `<div class="rt"><span>${l}</span><i><b style="width:${r[k]}%"></b></i><span>${r[k]}</span></div>`).join('')}
-    <p>Lv ${inst.lv} / ${rar.cap}　${'★'.repeat(inst.stars)}${'☆'.repeat(STAR_MAX - inst.stars)}　${maxed ? '（等級已滿）' : `經驗 ${inst.xp} / ${xpNeed(inst.lv)}`}</p>
-    <h4>技能 <small class="muted">${(inst.sk || []).length} 個</small></h4><ul class="skl">${(inst.sk || []).map((id) => { const k = SK[id]; return `<li class="g${k.grade}"><b style="color:${GR[k.grade].color}">${GR[k.grade].name}</b> ${esc(k.name)}<small>${SKILLS.desc(k)}</small></li>`; }).join('') || '<li class="muted">沒有技能</li>'}</ul>
+    ${keys.map(([k, l]) => `<div class="rt"><span>${l}</span><i><b style="width:${Math.min(100, r[k])}%"></b></i><span>${r[k]}</span></div>`).join('')}
+    <p>Lv ${inst.lv} / ${LV_MAX}　${'★'.repeat(inst.stars)}${'☆'.repeat(STAR_MAX - inst.stars)}　${maxed ? '（等級已滿）' : `經驗 ${inst.xp} / ${xpNeed(inst.lv)}`}</p>
+    <h4>技能 <small class="muted">${(inst.sk || []).length} 個・技能完全隨機，Lv100／200／300／400／500 各得一次重骰機會</small></h4><ul class="skl">${(inst.sk || []).map((id) => { const k = SK[id]; return `<li class="g${k.grade}"><b style="color:${GR[k.grade].color}">${GR[k.grade].name}</b> ${esc(k.name)}<small>${SKILLS.desc(k)}</small></li>`; }).join('') || '<li class="muted">沒有技能</li>'}</ul>
     <p class="muted">生涯：${line}</p>
     <div class="row"><button id="train" class="big" ${maxed || S.coins < 300 ? 'disabled' : ''}>💪 特訓（🪙300，經驗 +200）</button>
-    <button id="reroll" ${S.coins < REROLL ? 'disabled' : ''} title="重新隨機抽選技能（專屬技能保留）">🎲 技能重練（🪙${REROLL}）</button>
+    <button id="reroll" ${rerolls(inst) > 0 ? '' : 'disabled'} title="每 100 級獲得一次重骰機會">🎲 重骰技能（剩 ${rerolls(inst)} 次）</button>
     <button id="sell" ${inUse ? 'disabled title="在陣容中，請先換下"' : ''}>釋出（🪙${rar.sell * inst.stars}）</button><button id="close">關閉</button></div></div></div>`, 'wide');
   drawPortraits();
   m.querySelector('#reroll').onclick = () => {
-    if (!confirm(`花 🪙${REROLL} 重新抽選 ${c.name} 的技能？`)) return;
-    S.coins -= REROLL; const n = (inst.sk || []).filter((id) => !SK[id].owner).length, keep = (inst.sk || []).filter((id) => SK[id].owner);
-    inst.sk = keep; for (let k = 0; k < n; k++) { const id = SKILLS.rollOne(c, inst.sk); if (id) inst.sk.push(id); }
-    save(); playerDialog(inst); toast('技能重練完成！');
+    if (rerolls(inst) <= 0 || !confirm(`用掉一次機會，重骰 ${c.name} 的全部技能？`)) return;
+    inst.rru = (inst.rru || 0) + 1; inst.sk = SKILLS.rollSet(c, Math.random, (inst.sk || []).length);
+    save(); playerDialog(inst); toast('技能重骰完成！');
   };
-  m.querySelector('#train').onclick = () => { S.coins -= 300; const n = gainXp(inst, 200); save(); playerDialog(inst); if (n) toast(`${c.name} 升到 Lv ${inst.lv}！`); };
+  m.querySelector('#train').onclick = () => { S.coins -= 300; const n = gainXp(inst, 200); save(); playerDialog(inst); if (n) toast(`${c.name} 升到 Lv ${inst.lv}！${Math.floor(inst.lv / 100) > Math.floor((inst.lv - n) / 100) ? ' 🎲 獲得技能重骰機會' : ''}`); };
   m.querySelector('#sell').onclick = () => { if (!confirm(`確定釋出 ${c.name}？`)) return; S.coins += rar.sell * inst.stars; S.cards = S.cards.filter((i) => i !== inst); save(); closeModal(); render(); };
   m.querySelector('#close').onclick = () => { closeModal(); render(); };
 }
@@ -439,7 +437,7 @@ function playMatch(watch) {
   Match.start(away, home, { onEnd: done, autoplay: true });
 }
 function resultDialog(o) {
-  const lv = o.ups.map((u) => `${esc(card(u.inst).name)} Lv${u.inst.lv}`).join('、');
+  const lv = o.ups.map((u) => `${esc(card(u.inst).name)} Lv${u.inst.lv}${Math.floor(u.inst.lv / 100) > Math.floor((u.inst.lv - u.n) / 100) ? '（🎲 獲得技能重骰機會！）' : ''}`).join('、');
   const s = o.season;
   const m = modal(`<h2>${o.win ? '🎉 勝利！' : o.tie ? '平手' : '敗戰'}</h2><div class="big score">${o.rMe} : ${o.rOp}</div>
     <p>🪙 +${o.coins}${o.mvp ? `　MVP：<b>${esc(o.mvp.name)}</b>` : ''}</p>${lv ? `<p class="good">升級：${lv}</p>` : ''}

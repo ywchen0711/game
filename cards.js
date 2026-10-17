@@ -7,13 +7,13 @@ function rng(seed) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79
 
 // ---------------- 稀有度 ----------------
 const RARITY = {
-  N:   { name: 'N',   color: '#9aa2bd', glow: '#cfd5e8', ovr: [38, 50], cap: 30, sell: 30 },
-  R:   { name: 'R',   color: '#4cd07a', glow: '#a8f5c0', ovr: [48, 60], cap: 40, sell: 80 },
-  SR:  { name: 'SR',  color: '#4a9aff', glow: '#a8d0ff', ovr: [58, 70], cap: 50, sell: 200 },
-  SSR: { name: 'SSR', color: '#c06aff', glow: '#e4c0ff', ovr: [68, 80], cap: 60, sell: 600 },
-  UR:  { name: 'UR',  color: '#ffc83a', glow: '#fff0a0', ovr: [80, 88], cap: 70, sell: 2000 },
-  LR:  { name: 'LR',  color: '#ff5a4a', glow: '#ffc0a8', ovr: [87, 93], cap: 80, sell: 5000 },
-  EX:  { name: 'EX',  color: '#ff6ad5', glow: '#ffd0f4', ovr: [95, 99], cap: 99, sell: 20000, hidden: true },   // 隱藏超級球員
+  N:   { name: 'N',   color: '#9aa2bd', glow: '#cfd5e8', ovr: [38, 50], cap: 500, sell: 30 },
+  R:   { name: 'R',   color: '#4cd07a', glow: '#a8f5c0', ovr: [48, 60], cap: 500, sell: 80 },
+  SR:  { name: 'SR',  color: '#4a9aff', glow: '#a8d0ff', ovr: [58, 70], cap: 500, sell: 200 },
+  SSR: { name: 'SSR', color: '#c06aff', glow: '#e4c0ff', ovr: [68, 80], cap: 500, sell: 600 },
+  UR:  { name: 'UR',  color: '#ffc83a', glow: '#fff0a0', ovr: [80, 88], cap: 500, sell: 2000 },
+  LR:  { name: 'LR',  color: '#ff5a4a', glow: '#ffc0a8', ovr: [87, 93], cap: 500, sell: 5000 },
+  EX:  { name: 'EX',  color: '#ff6ad5', glow: '#ffd0f4', ovr: [95, 99], cap: 500, sell: 20000, hidden: true },   // 隱藏超級球員
 };
 const ORDER = ['N', 'R', 'SR', 'SSR', 'UR', 'LR', 'EX'];
 const HIT = ['contact', 'power', 'eye', 'speed', 'defense', 'arm'], PIT = ['fastball', 'breaking', 'control', 'stamina'];
@@ -100,13 +100,16 @@ function openPack(kind, save, R = Math.random) {
 }
 
 // ---------------- 養成：等級、星數、能力 ----------------
-const xpNeed = lv => 100 + lv * 25;
+// 等級上限 500，越往上越難升；每升一級全能力 +0.08（500 級時約 +40），每 100 級可以免費重骰一次技能
+const LV_MAX = 500, GROW = 0.08, STAT_MAX = 140;
+const xpNeed = lv => 150 + lv * 2;
+const rerolls = (inst) => Math.floor(inst.lv / 100) - (inst.rru || 0);
 const STAR_MAX = 5;
 function stats(inst) {
-  const c = BY_CID[inst.cid], cap = RARITY[c.rarity].cap, grow = 12 / (cap - 1), out = {};
+  const c = BY_CID[inst.cid], out = {};
   const keys = c.role === 'H' ? HIT : PIT;
   for (const k in c.r) out[k] = c.r[k];
-  for (const k of keys) out[k] = Math.round(clamp(c.r[k] + (inst.lv - 1) * grow + (inst.stars - 1) * 2, 1, 99));
+  for (const k of keys) out[k] = Math.round(clamp(c.r[k] + (inst.lv - 1) * GROW + (inst.stars - 1) * 2, 1, STAT_MAX));
   return out;
 }
 function ovr(inst) {
@@ -116,7 +119,7 @@ function ovr(inst) {
 }
 // add experience; returns the number of level-ups
 function gainXp(inst, n) {
-  const cap = RARITY[BY_CID[inst.cid].rarity].cap; let ups = 0;
+  const cap = LV_MAX; let ups = 0;
   if (inst.lv >= cap) return 0;
   inst.xp += Math.round(n);
   while (inst.lv < cap && inst.xp >= xpNeed(inst.lv)) { inst.xp -= xpNeed(inst.lv); inst.lv++; ups++; }
@@ -141,5 +144,5 @@ function ensureSkills(save) {
   for (const i of save.cards) if (!i.sk) { const c = BY_CID[i.cid]; i.sk = SKILLS.rollSet(c); for (const s of [3, 5]) if (i.stars >= s) { const id = SKILLS.rollOne(c, i.sk); if (id) i.sk.push(id); } }
 }
 
-root.CARDS = { RARITY, ORDER, POOL, BY_CID, PACKS, PITY, openPack, stats, ovr, gainXp, xpNeed, addCard, ensureSkills, STAR_MAX, HIT, PIT, isPitcher, rng };
+root.CARDS = { RARITY, ORDER, POOL, BY_CID, PACKS, PITY, openPack, stats, ovr, gainXp, xpNeed, addCard, ensureSkills, rerolls, LV_MAX, STAR_MAX, HIT, PIT, isPitcher, rng };
 })(typeof window !== 'undefined' ? window : globalThis);
