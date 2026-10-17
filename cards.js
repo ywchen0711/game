@@ -37,22 +37,27 @@ const CHEN = [
 ];
 const SLOTS_H = ['C', 'C', '1B', '2B', 'SS', '3B', 'LF', 'CF', 'RF', '1B', '2B', 'SS', '3B', 'LF', 'CF', 'RF'];
 const SLOTS_P = ['SP', 'SP', 'SP', 'RP', 'RP', 'RP', 'CL', 'SP', 'RP', 'RP'];
-const COUNT = { N: 80, R: 60, SR: 40, SSR: 24, UR: 12, LR: 8, EX: 4 };
+const COUNT = { N: 80, R: 60, SR: 40, SSR: 24, UR: 12, LR: 8, EX: 4 };              // the first 228 cards (ids 1-228 never change)
+const MORE = { N: 280, R: 210, SR: 140, SSR: 86, UR: 38, LR: 18 };                   // 772 more from a second seed: 1000 players in all
 function buildPool() {
-  const R = rng(20261017), pick = (s) => s[Math.floor(R() * s.length)];
-  const gauss = () => { let u = 0, v = 0; while (!u) u = R(); while (!v) v = R(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
-  const used = new Set(), name = () => { let n; do n = pick(SUR) + pick(G1) + pick(G2); while (used.has(n)); used.add(n); return n; };
-  const pool = []; let cid = 1;
-  for (const rar of ORDER) {
-    const [lo, hi] = RARITY[rar].ovr;
-    for (let i = 0; i < COUNT[rar]; i++) {
-      if (rar === 'EX') { const c = CHEN[i]; pool.push(finish({ cid: cid++, rarity: rar, ...c, legend: true, hidden: true }, R)); continue; }
-      const pitcher = R() < 0.42, pos = pitcher ? SLOTS_P[i % SLOTS_P.length] : SLOTS_H[i % SLOTS_H.length], ovr = lo + R() * (hi - lo), r = {};
-      if (pitcher) { for (const k of PIT) r[k] = ovr + gauss() * 6; r.stamina = pos === 'SP' ? ovr + 10 + gauss() * 5 : ovr - 18 + gauss() * 6; if (pos === 'CL') { r.fastball += 4; r.breaking += 3; } }
-      else { for (const k of HIT) r[k] = ovr + gauss() * 8; for (const [k, v] of Object.entries(ADJ[pos] || {})) r[k] += v * 0.6; }
-      pool.push(finish({ cid: cid++, rarity: rar, name: name(), pos, bats: R() < 0.32 ? 'L' : 'R', throws: R() < 0.27 ? 'L' : 'R', r, legend: rar === 'UR' || rar === 'LR' }, R));
+  const used = new Set(), pool = []; let cid = 1;
+  const batch = (seed, counts) => {
+    const R = rng(seed), pick = (s) => s[Math.floor(R() * s.length)];
+    const gauss = () => { let u = 0, v = 0; while (!u) u = R(); while (!v) v = R(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+    const name = () => { let n; do n = pick(SUR) + pick(G1) + pick(G2); while (used.has(n)); used.add(n); return n; };
+    for (const rar of ORDER) {
+      const [lo, hi] = RARITY[rar].ovr;
+      for (let i = 0; i < (counts[rar] || 0); i++) {
+        if (rar === 'EX') { const c = CHEN[i]; pool.push(finish({ cid: cid++, rarity: rar, ...c, legend: true, hidden: true }, R)); continue; }
+        const pitcher = R() < 0.42, pos = pitcher ? SLOTS_P[i % SLOTS_P.length] : SLOTS_H[i % SLOTS_H.length], ovr = lo + R() * (hi - lo), r = {};
+        if (pitcher) { for (const k of PIT) r[k] = ovr + gauss() * 6; r.stamina = pos === 'SP' ? ovr + 10 + gauss() * 5 : ovr - 18 + gauss() * 6; if (pos === 'CL') { r.fastball += 4; r.breaking += 3; } }
+        else { for (const k of HIT) r[k] = ovr + gauss() * 8; for (const [k, v] of Object.entries(ADJ[pos] || {})) r[k] += v * 0.6; }
+        pool.push(finish({ cid: cid++, rarity: rar, name: name(), pos, bats: R() < 0.32 ? 'L' : 'R', throws: R() < 0.27 ? 'L' : 'R', r, legend: rar === 'UR' || rar === 'LR' }, R));
+      }
     }
-  }
+  };
+  batch(20261017, COUNT); batch(20261099, MORE);
+  for (const c of pool) addTraits(c);
   return pool;
   function finish(c, R) {
     for (const k in c.r) c.r[k] = Math.round(clamp(c.r[k], 15, 99));
@@ -68,6 +73,41 @@ function buildPool() {
     return c;
   }
 }
+// ---------------- 球員特色：每張卡固定的個性（跑得快、很會守、能守很多位置⋯⋯） ----------------
+const TRAITS = {
+  speed:  { name: '飛毛腿', icon: '🏃', who: 'H', fx: { speed: 12 } },
+  glove:  { name: '守備職人', icon: '🧤', who: 'H', fx: { defense: 12 } },
+  util:   { name: '萬能工具人', icon: '🔄', who: 'H', fx: {}, desc: '能守多個位置，不算非本職' },
+  cannon: { name: '雷射肩', icon: '🎯', who: 'H', fx: { arm: 12 } },
+  slug:   { name: '重砲手', icon: '💥', who: 'H', fx: { power: 10 } },
+  hitter: { name: '安打王', icon: '🏏', who: 'H', fx: { contact: 10 } },
+  eye:    { name: '選球專家', icon: '👁', who: 'H', fx: { eye: 12 } },
+  flame:  { name: '火球男', icon: '🔥', who: 'P', fx: { fastball: 9 } },
+  magic:  { name: '變化球大師', icon: '🌀', who: 'P', fx: { breaking: 9 }, desc: '多一種變化球' },
+  sniper: { name: '精準控球', icon: '📐', who: 'P', fx: { control: 10 } },
+  iron:   { name: '鐵臂', icon: '🦾', who: 'P', fx: { stamina: 14 } },
+  ace:    { name: '三振機器', icon: '⚡', who: 'P', fx: { fastball: 5, breaking: 5 } },
+};
+const ST_CN = { contact: '打擊', power: '力量', eye: '選球', speed: '速度', defense: '守備', arm: '臂力', fastball: '速球', breaking: '變化球', control: '控球', stamina: '體力' };
+const traitDesc = (k) => TRAITS[k].desc || Object.entries(TRAITS[k].fx).map(([s, v]) => `${ST_CN[s]} +${v}`).join('、');
+const ALT = { C: ['1B'], '1B': ['3B', 'LF', 'RF'], '2B': ['SS', '3B', '1B'], SS: ['2B', '3B'], '3B': ['1B', 'SS', '2B'], LF: ['RF', 'CF', '1B'], CF: ['LF', 'RF'], RF: ['LF', 'CF', '1B'] };
+const T_ODDS = { N: [0.4, 0], R: [0.55, 0.05], SR: [0.7, 0.15], SSR: [0.85, 0.3], UR: [1, 0.5], LR: [1, 0.7] };
+const CHEN_T = { 'Josh Chen': ['speed', 'glove'], 'Jasper Chen': ['util', 'glove'], 'Jeff Chen': ['flame', 'iron'], 'Erin Lai': ['flame', 'magic'] };
+function addTraits(c) {
+  const R = rng(c.cid * 7919 + 13), who = c.role === 'H' ? 'H' : 'P';
+  let ts = CHEN_T[c.name];
+  if (!ts) {
+    const [p1, p2] = T_ODDS[c.rarity], keys = Object.keys(TRAITS).filter((k) => TRAITS[k].who === who && !(k === 'iron' && c.pos !== 'SP'));
+    ts = [];
+    if (R() < p1) { ts.push(keys.splice(Math.floor(R() * keys.length), 1)[0]); if (R() < p2) ts.push(keys.splice(Math.floor(R() * keys.length), 1)[0]); }
+  }
+  c.traits = ts;
+  for (const t of ts) for (const [k, v] of Object.entries(TRAITS[t].fx)) c.r[k] = Math.min(99, c.r[k] + v);
+  if (ts.includes('util')) { const a = ALT[c.pos].slice().sort(() => R() - 0.5); c.alt = a.slice(0, Math.max(2, a.length - (R() < 0.5 ? 1 : 0))); if (c.pos === 'C') c.alt = ['1B', '3B']; }
+  if (ts.includes('magic')) { const left = BREAKING.filter((b) => !c.pitches.includes(b)); c.pitches.push(left[Math.floor(R() * left.length)]); }
+  if (c.role !== 'H') c.velo = Math.round(138 + c.r.fastball * 0.21);
+}
+const canPlay = (c, pos) => pos === 'DH' || c.pos === pos || (c.alt || []).includes(pos);
 const POOL = buildPool(), BY_CID = Object.fromEntries(POOL.map(c => [c.cid, c]));
 
 // ---------------- 抽卡包 ----------------
@@ -107,15 +147,15 @@ const LV_MAX = 500, GROW = 0.08, STAT_MAX = 140;
 const xpNeed = lv => 150 + lv * 2;
 const rerolls = (inst) => Math.floor(inst.lv / 100) - (inst.rru || 0);
 const STAR_MAX = 5;
-function stats(inst) {
+function stats(inst, bonus) {
   const c = BY_CID[inst.cid], out = {};
   const keys = c.role === 'H' ? HIT : PIT;
   for (const k in c.r) out[k] = c.r[k];
-  for (const k of keys) out[k] = Math.round(clamp(c.r[k] + (inst.lv - 1) * GROW + (inst.stars - 1) * 2, 1, STAT_MAX));
+  for (const k of keys) out[k] = Math.round(clamp(c.r[k] + (inst.lv - 1) * GROW + (inst.stars - 1) * 2 + ((bonus && bonus[k]) || 0), 1, STAT_MAX));
   return out;
 }
-function ovr(inst) {
-  const c = BY_CID[inst.cid], r = stats(inst);
+function ovr(inst, bonus) {
+  const c = BY_CID[inst.cid], r = stats(inst, bonus);
   if (c.role === 'H') return Math.round(r.contact * 0.24 + r.power * 0.22 + r.eye * 0.14 + r.speed * 0.12 + r.defense * 0.16 + r.arm * 0.12);
   return Math.round(c.role === 'SP' ? r.fastball * 0.3 + r.breaking * 0.3 + r.control * 0.25 + r.stamina * 0.15 : r.fastball * 0.36 + r.breaking * 0.34 + r.control * 0.3);
 }
@@ -146,5 +186,5 @@ function ensureSkills(save) {
   for (const i of save.cards) if (!i.sk) { const c = BY_CID[i.cid]; i.sk = SKILLS.rollSet(c); for (const s of [3, 5]) if (i.stars >= s) { const id = SKILLS.rollOne(c, i.sk); if (id) i.sk.push(id); } }
 }
 
-root.CARDS = { RARITY, ORDER, POOL, BY_CID, PACKS, PITY, openPack, stats, ovr, gainXp, xpNeed, addCard, ensureSkills, rerolls, LV_MAX, STAR_MAX, HIT, PIT, isPitcher, rng };
+root.CARDS = { TRAITS, traitDesc, canPlay, ST_CN, RARITY, ORDER, POOL, BY_CID, PACKS, PITY, openPack, stats, ovr, gainXp, xpNeed, addCard, ensureSkills, rerolls, LV_MAX, STAR_MAX, HIT, PIT, isPitcher, rng };
 })(typeof window !== 'undefined' ? window : globalThis);

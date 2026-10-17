@@ -108,7 +108,7 @@ table.lineup select { width: 100%; }
 .season { border-top: 2px solid #000; margin-top: 10px; padding-top: 6px; }
 .pd { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
 .pd > div:last-child { flex: 1; min-width: 240px; }
-.rt { display: grid; grid-template-columns: 50px 1fr 28px; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); margin: 3px 0; }
+.rt { display: grid; grid-template-columns: 50px 1fr 56px; white-space: nowrap; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); margin: 3px 0; }
 .rt i { display: block; height: 7px; background: #3a4157; }
 .rt i b { display: block; height: 100%; background: var(--gold); }
 .toast { position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%); background: var(--gold); color: #1b1300; font-weight: bold; padding: 10px 18px; border: 3px solid #000; border-radius: 6px; z-index: 40; }
@@ -189,3 +189,27 @@ table.prize td:nth-child(2) { white-space: nowrap; }
 .bt.lose { opacity: .5; }
 .bt.tbd { color: var(--muted); justify-content: center; }
 .champ .bm { border-color: var(--gold); font-size: 15px; }
+
+/* ---- traits, equipment, coaches, pages ---- */
+.pcard .trt { position: absolute; top: 3px; right: 4px; font-size: 12px; line-height: 1; display: flex; flex-direction: column; gap: 1px; }
+.trl li { border-color: #3a6a8a; }
+.eqs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 8px; }
+.eq { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--muted); }
+.eq select { width: 100%; }
+.rt small.good { font-size: 10px; }
+.staff { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.staffslot { background: var(--panel2); border: 2px solid #000; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.staffslot h4 { margin: 0; }
+.coach { display: flex; gap: 8px; align-items: center; border-left: 4px solid var(--rc); padding-left: 6px; }
+.coach .pf, .lootc .pf { width: 60px; height: 64px; image-rendering: pixelated; }
+.coach .cd { font-size: 12px; color: var(--good); }
+.rc { color: var(--rc); font-weight: bold; }
+.coaches { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.coaches > div { background: var(--panel2); padding: 6px; display: flex; flex-direction: column; gap: 6px; }
+table.gear td { font-size: 13px; }
+.loot { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 12px 0; }
+.lootc { width: 170px; background: var(--panel2); border: 3px solid var(--rc); box-shadow: 0 0 14px color-mix(in srgb, var(--rc) 50%, transparent); padding: 10px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.lootc .ic { font-size: 40px; }
+.lootc p { margin: 0; font-size: 12px; color: var(--good); }
+.pager { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-top: 10px; }
+.pager button { min-width: 34px; }
