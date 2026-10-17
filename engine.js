@@ -151,6 +151,7 @@ function makeMatch() {
 }
 
 function buildLineup(team) {
+  if (team.order) return team.order.map(o => ({ p: o.p, pos: o.pos }));      // 玩家自己排的打序（養成模式）
   const pool = team.roster.slice(0, 9).map(p => ({ p, pos: p.pos }));
   const take = f => { pool.sort((a, b) => f(b.p.r) - f(a.p.r)); return pool.shift(); };
   const o = [];
