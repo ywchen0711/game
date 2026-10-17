@@ -3,29 +3,30 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>像素職棒 · 養成</title>
+<title data-en="Pixel Baseball · Club">像素職棒 · 養成</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%23f4f4f4' stroke='%23202020'/%3E%3Cpath d='M4 3q3 5 0 10M12 3q-3 5 0 10' stroke='%23e04040' fill='none'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
 <div id="app">
   <header class="panel bar top">
-    <h1>⚾ 像素職棒<small>養成 · 抽卡 · 聯盟</small></h1>
+    <h1 data-en="⚾ Pixel Baseball&lt;small&gt;Club · Packs · League&lt;/small&gt;">⚾ 像素職棒<small>養成 · 抽卡 · 聯盟</small></h1>
     <nav id="nav" class="nav"></nav>
     <span class="grow"></span>
-    <span id="cloud" class="muted">本機存檔</span>
+    <span id="cloud" class="muted" data-en="Local save">本機存檔</span>
+    <button id="langBtn" title="English / 中文">EN</button>
   </header>
 
   <section id="club"><div id="screen"></div></section>
 
   <section id="match" hidden>
     <div class="panel bar">
-      <button id="btnBack">← 回主場</button>
-      <button id="btnPlay" class="big">▶ 開始比賽</button>
-      <label>速度 <select id="speed"><option value="0.5">0.5x</option><option value="1" selected>1x</option><option value="2">2x</option><option value="4">4x</option><option value="8">8x</option></select></label>
-      <button id="btnSim">⏭ 模擬到結束</button>
+      <button id="btnBack" data-en="← Back">← 回主場</button>
+      <button id="btnPlay" class="big" data-en="▶ Play ball">▶ 開始比賽</button>
+      <label><span data-en="Speed">速度</span> <select id="speed"><option value="0.5">0.5x</option><option value="1" selected>1x</option><option value="2">2x</option><option value="4">4x</option><option value="8">8x</option></select></label>
+      <button id="btnSim" data-en="⏭ Sim to end">⏭ 模擬到結束</button>
       <span class="grow"></span>
-      <button id="btnFx">✨ 特效</button>
+      <button id="btnFx" data-en="✨ Effects">✨ 特效</button>
     </div>
     <div class="main">
       <div class="left">
@@ -35,7 +36,7 @@
       <aside class="side">
         <div class="cards"><div class="panel card" id="cardP"></div><div class="panel card" id="cardB"></div></div>
         <div class="panel tabsbox">
-          <div class="tabs"><button data-tab="log" class="on">文字轉播</button><button data-tab="box">比賽數據</button><button data-tab="roster">球員名單</button></div>
+          <div class="tabs"><button data-tab="log" class="on" data-en="Play-by-play">文字轉播</button><button data-tab="box" data-en="Box score">比賽數據</button><button data-tab="roster" data-en="Rosters">球員名單</button></div>
           <div class="pane on" id="pane-log"><div id="log"></div></div>
           <div class="pane" id="pane-box"><div id="box"></div></div>
           <div class="pane" id="pane-roster"><div class="sel" id="rosterSel"></div><div id="roster"></div></div>
@@ -45,13 +46,15 @@
   </section>
 </div>
 <div id="modal" hidden></div>
-<script src="skills.js?v=2"></script>
-<script src="items.js?v=1"></script>
+<script src="i18n.js?v=1"></script>
+<script src="en.js?v=1"></script>
+<script src="skills.js?v=3"></script>
+<script src="items.js?v=2"></script>
 <script src="net.js?v=1"></script>
-<script src="engine.js?v=4"></script>
-<script src="cards.js?v=5"></script>
-<script src="game.js?v=3"></script>
-<script src="club.js?v=9"></script>
+<script src="engine.js?v=5"></script>
+<script src="cards.js?v=6"></script>
+<script src="game.js?v=4"></script>
+<script src="club.js?v=10"></script>
 <script src="/hub.js" data-pos="bottom-left" defer></script>
 </body>
 </html>

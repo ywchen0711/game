@@ -171,6 +171,7 @@ ul.skl li.g4 { border-color: #ff6ad5; box-shadow: 0 0 8px rgba(255,106,213,.35);
 .cups { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
 .cupc.hard { border-color: #5a2020; }
 .cupc.hard h4::after { content: ' ⚠ 強敵'; color: #ff7a6a; font-size: 12px; }
+html[lang="en"] .cupc.hard h4::after { content: ' ⚠ Tough'; }
 table.prize { width: 100%; border-collapse: collapse; margin: 6px 0 10px; font-size: 12px; }
 table.prize td { padding: 3px 4px; border-bottom: 1px dashed #2f3650; text-align: left; }
 table.prize td:first-child { color: var(--gold); font-weight: bold; white-space: nowrap; }

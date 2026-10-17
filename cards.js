@@ -22,7 +22,7 @@ const ADJ = {
   SS: { defense: 12, speed: 7, arm: 8, power: -7 }, '3B': { arm: 9, power: 4, defense: 3 }, LF: { power: 5, defense: -5 },
   CF: { speed: 13, defense: 9, arm: 2, power: -2 }, RF: { arm: 12, power: 5 },
 };
-const BREAKING = ['滑球', '曲球', '變速球', '指叉球', '卡特球', '伸卡球', '橫掃球'];
+const BREAKING = [$t('滑球'), $t('曲球'), $t('變速球'), $t('指叉球'), $t('卡特球'), $t('伸卡球'), $t('橫掃球')];
 const SUR = '陳林黃張李王吳劉蔡楊許鄭謝郭洪曾邱廖賴周徐蘇葉莊呂江何蕭羅高潘簡朱鍾彭游詹胡施沈余趙盧梁顏柯孫魏翁戴范宋方鄧杜傅侯曹薛丁卓阮馬董唐藍蔣石古紀姚連馮程湯田康姜白汪鄒尤巫黎涂龔嚴韓袁金陸夏柳邵錢倪溫譚駱熊任秦顧毛';
 const G1 = '志俊建家冠宗承柏彥睿子泓品宇哲嘉文信政明國偉智勝耀聖振博凱祐育廷浩翔安仁祥立昱晉維崇峻銘鴻正啟';
 const G2 = '明傑宏豪宇翰恩廷哲瑋偉彬勳龍輝雄霖凱翔誠均軒鈞源達賢毅鋒威平安昌德民倫揚瑞弘竣';
@@ -75,21 +75,21 @@ function buildPool() {
 }
 // ---------------- 球員特色：每張卡固定的個性（跑得快、很會守、能守很多位置⋯⋯） ----------------
 const TRAITS = {
-  speed:  { name: '飛毛腿', icon: '🏃', who: 'H', fx: { speed: 12 } },
-  glove:  { name: '守備職人', icon: '🧤', who: 'H', fx: { defense: 12 } },
-  util:   { name: '萬能工具人', icon: '🔄', who: 'H', fx: {}, desc: '能守多個位置，不算非本職' },
-  cannon: { name: '雷射肩', icon: '🎯', who: 'H', fx: { arm: 12 } },
-  slug:   { name: '重砲手', icon: '💥', who: 'H', fx: { power: 10 } },
-  hitter: { name: '安打王', icon: '🏏', who: 'H', fx: { contact: 10 } },
-  eye:    { name: '選球專家', icon: '👁', who: 'H', fx: { eye: 12 } },
-  flame:  { name: '火球男', icon: '🔥', who: 'P', fx: { fastball: 9 } },
-  magic:  { name: '變化球大師', icon: '🌀', who: 'P', fx: { breaking: 9 }, desc: '多一種變化球' },
-  sniper: { name: '精準控球', icon: '📐', who: 'P', fx: { control: 10 } },
-  iron:   { name: '鐵臂', icon: '🦾', who: 'P', fx: { stamina: 14 } },
-  ace:    { name: '三振機器', icon: '⚡', who: 'P', fx: { fastball: 5, breaking: 5 } },
+  speed:  { name: $t('飛毛腿'), icon: '🏃', who: 'H', fx: { speed: 12 } },
+  glove:  { name: $t('守備職人'), icon: '🧤', who: 'H', fx: { defense: 12 } },
+  util:   { name: $t('萬能工具人'), icon: '🔄', who: 'H', fx: {}, desc: $t('能守多個位置，不算非本職') },
+  cannon: { name: $t('雷射肩'), icon: '🎯', who: 'H', fx: { arm: 12 } },
+  slug:   { name: $t('重砲手'), icon: '💥', who: 'H', fx: { power: 10 } },
+  hitter: { name: $t('安打王'), icon: '🏏', who: 'H', fx: { contact: 10 } },
+  eye:    { name: $t('選球專家'), icon: '👁', who: 'H', fx: { eye: 12 } },
+  flame:  { name: $t('火球男'), icon: '🔥', who: 'P', fx: { fastball: 9 } },
+  magic:  { name: $t('變化球大師'), icon: '🌀', who: 'P', fx: { breaking: 9 }, desc: $t('多一種變化球') },
+  sniper: { name: $t('精準控球'), icon: '📐', who: 'P', fx: { control: 10 } },
+  iron:   { name: $t('鐵臂'), icon: '🦾', who: 'P', fx: { stamina: 14 } },
+  ace:    { name: $t('三振機器'), icon: '⚡', who: 'P', fx: { fastball: 5, breaking: 5 } },
 };
-const ST_CN = { contact: '打擊', power: '力量', eye: '選球', speed: '速度', defense: '守備', arm: '臂力', fastball: '速球', breaking: '變化球', control: '控球', stamina: '體力' };
-const traitDesc = (k) => TRAITS[k].desc || Object.entries(TRAITS[k].fx).map(([s, v]) => `${ST_CN[s]} +${v}`).join('、');
+const ST_CN = { contact: $t('打擊'), power: $t('力量'), eye: $t('選球'), speed: $t('速度'), defense: $t('守備'), arm: $t('臂力'), fastball: $t('速球'), breaking: $t('變化球'), control: $t('控球'), stamina: $t('體力') };
+const traitDesc = (k) => TRAITS[k].desc || Object.entries(TRAITS[k].fx).map(([s, v]) => `${ST_CN[s]} +${v}`).join($t('、'));
 const ALT = { C: ['1B'], '1B': ['3B', 'LF', 'RF'], '2B': ['SS', '3B', '1B'], SS: ['2B', '3B'], '3B': ['1B', 'SS', '2B'], LF: ['RF', 'CF', '1B'], CF: ['LF', 'RF'], RF: ['LF', 'CF', '1B'] };
 const T_ODDS = { N: [0.4, 0], R: [0.55, 0.05], SR: [0.7, 0.15], SSR: [0.85, 0.3], UR: [1, 0.5], LR: [1, 0.7] };
 const CHEN_T = { 'Josh Chen': ['speed', 'glove'], 'Jasper Chen': ['util', 'glove'], 'Jeff Chen': ['flame', 'iron'], 'Erin Lai': ['flame', 'magic'] };
@@ -108,16 +108,18 @@ function addTraits(c) {
   if (c.role !== 'H') c.velo = Math.round(138 + c.r.fastball * 0.21);
 }
 const canPlay = (c, pos) => pos === 'DH' || c.pos === pos || (c.alt || []).includes(pos);
-const POOL = buildPool(), BY_CID = Object.fromEntries(POOL.map(c => [c.cid, c]));
+const POOL = buildPool();
+if (root.I18N && I18N.EN) for (const c of POOL) c.name = I18N.nm(c.name);      // English names: 陳冠宇 → Kuan-Yu Chen
+const BY_CID = Object.fromEntries(POOL.map(c => [c.cid, c]));
 
 // ---------------- 抽卡包 ----------------
 const PACKS = {
-  std:     { name: '標準球員包', desc: '5 張球員卡', cost: 500, n: 5, odds: { N: 57.82, R: 29, SR: 9.5, SSR: 3, UR: 0.5, LR: 0.15, EX: 0.03 } },
-  premium: { name: '高級球員包', desc: '5 張，保證至少 1 張 SR 以上', cost: 1500, n: 5, odds: { N: 0, R: 53.32, SR: 32, SSR: 12, UR: 2, LR: 0.6, EX: 0.08 }, guarantee: 'SR' },
-  pitch:   { name: '投手專門包', desc: '5 張投手卡', cost: 900, n: 5, odds: { N: 39.66, R: 36, SR: 17, SSR: 6, UR: 1, LR: 0.3, EX: 0.04 }, filter: (c) => c.role !== 'H' },
-  star:    { name: '明星球員包', desc: '盃賽獎品：5 張，保證至少 1 張 SSR 以上', reward: true, n: 5, odds: { SR: 55, SSR: 33, UR: 9, LR: 2.7, EX: 0.3 }, guarantee: 'SSR' },
-  legend:  { name: '傳說球員包', desc: '盃賽獎品：5 張，保證至少 1 張 UR 以上', reward: true, n: 5, odds: { SSR: 60, UR: 30, LR: 9, EX: 1 }, guarantee: 'UR' },
-  bat:     { name: '野手專門包', desc: '5 張野手卡', cost: 900, n: 5, odds: { N: 39.66, R: 36, SR: 17, SSR: 6, UR: 1, LR: 0.3, EX: 0.04 }, filter: (c) => c.role === 'H' },
+  std:     { name: $t('標準球員包'), desc: $t('5 張球員卡'), cost: 500, n: 5, odds: { N: 57.82, R: 29, SR: 9.5, SSR: 3, UR: 0.5, LR: 0.15, EX: 0.03 } },
+  premium: { name: $t('高級球員包'), desc: $t('5 張，保證至少 1 張 SR 以上'), cost: 1500, n: 5, odds: { N: 0, R: 53.32, SR: 32, SSR: 12, UR: 2, LR: 0.6, EX: 0.08 }, guarantee: 'SR' },
+  pitch:   { name: $t('投手專門包'), desc: $t('5 張投手卡'), cost: 900, n: 5, odds: { N: 39.66, R: 36, SR: 17, SSR: 6, UR: 1, LR: 0.3, EX: 0.04 }, filter: (c) => c.role !== 'H' },
+  star:    { name: $t('明星球員包'), desc: $t('盃賽獎品：5 張，保證至少 1 張 SSR 以上'), reward: true, n: 5, odds: { SR: 55, SSR: 33, UR: 9, LR: 2.7, EX: 0.3 }, guarantee: 'SSR' },
+  legend:  { name: $t('傳說球員包'), desc: $t('盃賽獎品：5 張，保證至少 1 張 UR 以上'), reward: true, n: 5, odds: { SSR: 60, UR: 30, LR: 9, EX: 1 }, guarantee: 'UR' },
+  bat:     { name: $t('野手專門包'), desc: $t('5 張野手卡'), cost: 900, n: 5, odds: { N: 39.66, R: 36, SR: 17, SSR: 6, UR: 1, LR: 0.3, EX: 0.04 }, filter: (c) => c.role === 'H' },
 };
 const PITY = 30;            // every 30 packs without an SSR+, the next card is SSR or better
 function rollRarity(odds, R) {

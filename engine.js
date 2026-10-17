@@ -18,8 +18,8 @@ const POS_XY = {
 };
 const FIELD = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
 const OF = new Set(['LF', 'CF', 'RF']);
-const POS_CN = { P: '投手', C: '捕手', '1B': '一壘手', '2B': '二壘手', '3B': '三壘手', SS: '游擊手', LF: '左外野手', CF: '中外野手', RF: '右外野手', DH: '指定打擊', UT: '內野工具人', OF: '外野手', SP: '先發投手', RP: '中繼投手', CL: '終結者' };
-const POS_SHORT = { P: '投', C: '捕', '1B': '一', '2B': '二', '3B': '三', SS: '游', LF: '左', CF: '中', RF: '右', DH: 'DH', UT: '內', OF: '外', SP: '先發', RP: '中繼', CL: '終結' };
+const POS_CN = { P: $t('投手'), C: $t('捕手'), '1B': $t('一壘手'), '2B': $t('二壘手'), '3B': $t('三壘手'), SS: $t('游擊手'), LF: $t('左外野手'), CF: $t('中外野手'), RF: $t('右外野手'), DH: $t('指定打擊'), UT: $t('內野工具人'), OF: $t('外野手'), SP: $t('先發投手'), RP: $t('中繼投手'), CL: $t('終結者') };
+const POS_SHORT = { P: $t('投'), C: $t('捕'), '1B': $t('一'), '2B': $t('二'), '3B': $t('三'), SS: $t('游'), LF: $t('左'), CF: $t('中'), RF: $t('右'), DH: 'DH', UT: $t('內'), OF: $t('外'), SP: $t('先發'), RP: $t('中繼'), CL: $t('終結') };
 const fence = th => { const a = Math.min(Math.abs(th), 45) / 45; return 330 + 70 * (1 - Math.pow(a, 1.5)); };
 
 // 能力 -> 物理量
@@ -36,14 +36,14 @@ const G2 = '明傑宏豪宇翰恩廷哲瑋偉彬勳龍輝雄霖凱翔誠均軒�
 const genName = () => pick(SUR) + pick(G1) + pick(G2);
 
 const TEAMS = [
-  { name: '藍鷹', hat: '#2346a8', shirt: '#f4f4f4', trim: '#2f5fd0', pants: '#283044', bar: '#4a86f5' },
-  { name: '赤獅', hat: '#a81e18', shirt: '#e0442a', trim: '#ffd38a', pants: '#6e1712', bar: '#f05a4a' },
-  { name: '翠龍', hat: '#1d6a34', shirt: '#eef0e0', trim: '#2aa050', pants: '#1d4a2a', bar: '#3cc070' },
-  { name: '金虎', hat: '#1a1a1a', shirt: '#f2b632', trim: '#1a1a1a', pants: '#3a3a3a', bar: '#f2c040' },
-  { name: '紫電', hat: '#4a2286', shirt: '#9a6ad8', trim: '#f0e0ff', pants: '#311556', bar: '#b07af0' },
-  { name: '黑熊', hat: '#1c1c1c', shirt: '#3c3c3c', trim: '#e0e0e0', pants: '#161616', bar: '#d0d0d0' },
+  { name: '藍鷹', hat: '#2346a8', shirt: '#f4f4f4', trim: '#2f5fd0', pants: '#283044', bar: '#4a86f5' },   // i18n:keep
+  { name: '赤獅', hat: '#a81e18', shirt: '#e0442a', trim: '#ffd38a', pants: '#6e1712', bar: '#f05a4a' },   // i18n:keep
+  { name: '翠龍', hat: '#1d6a34', shirt: '#eef0e0', trim: '#2aa050', pants: '#1d4a2a', bar: '#3cc070' },   // i18n:keep
+  { name: '金虎', hat: '#1a1a1a', shirt: '#f2b632', trim: '#1a1a1a', pants: '#3a3a3a', bar: '#f2c040' },   // i18n:keep
+  { name: '紫電', hat: '#4a2286', shirt: '#9a6ad8', trim: '#f0e0ff', pants: '#311556', bar: '#b07af0' },   // i18n:keep
+  { name: '黑熊', hat: '#1c1c1c', shirt: '#3c3c3c', trim: '#e0e0e0', pants: '#161616', bar: '#d0d0d0' },   // i18n:keep
 ];
-const CITIES = ['台北', '新北', '桃園', '台中', '台南', '高雄', '新竹', '嘉義', '花蓮', '基隆'];
+const CITIES = ['台北', '新北', '桃園', '台中', '台南', '高雄', '新竹', '嘉義', '花蓮', '基隆'];   // i18n:keep
 
 let PID = 1;
 const newStats = () => ({ G: 0, PA: 0, AB: 0, H: 0, D: 0, T: 0, HR: 0, RBI: 0, R: 0, BB: 0, SO: 0, SB: 0, CS: 0,
@@ -56,7 +56,7 @@ const ADJ = {
   RF: { arm: 12, power: 5 }, DH: { power: 12, contact: 4, defense: -18, speed: -8 },
   UT: { defense: 4, speed: 2, power: -5, contact: -3 }, OF: { speed: 6, defense: 2, power: -4 },
 };
-const BREAKING = ['滑球', '曲球', '變速球', '指叉球', '卡特球', '伸卡球', '橫掃球', '滑球', '曲球', '變速球'];
+const BREAKING = ['滑球', '曲球', '變速球', '指叉球', '卡特球', '伸卡球', '橫掃球', '滑球', '曲球', '變速球'];   // i18n:keep
 
 function mkPlayer(pos, role, r) {
   for (const k in r) r[k] = Math.round(clamp(r[k], role === 'H' ? 20 : 8, 99));
@@ -178,7 +178,9 @@ class TL {
 
 const C_GOOD = '#ffe14a', C_BAD = '#ff6a5a', C_INFO = '#bfe6ff', C_GOLD = '#ffcf3a';
 const runnerPath = (from, to) => { const pts = []; for (let b = from + 1; b <= to; b++) pts.push(BASE[b]); return pts; };
-const sprayName = sp => sp < -27 ? '左外野' : sp < -10 ? '左中間' : sp <= 10 ? '中外野' : sp <= 27 ? '右中間' : '右外野';
+const ord = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
+const baseEn = k => (k === 4 ? 'home' : ['', 'first', 'second', 'third'][k]);
+const sprayName = sp => sp < -27 ? $t('左外野') : sp < -10 ? $t('左中間') : sp <= 10 ? $t('中外野') : sp <= 27 ? $t('右中間') : $t('右外野');
 
 // ---------------- 比賽 ----------------
 class Game {
@@ -229,9 +231,9 @@ class Game {
     if (this.phase === 'half') {
       this.startHalf();
       const t = this.off().team;
-      const msg = `第 ${this.inning} 局${this.half ? '下' : '上'}　${t.full} 進攻`;
+      const msg = $L(`第 ${this.inning} 局${this.half ? '下' : '上'}　${t.full} 進攻`, `${this.half ? 'Bottom' : 'Top'} of the ${ord(this.inning)} — ${t.full} batting`);
       const log = [{ cls: 'inning', s: msg }];
-      if (this.bases[1]) log.push({ s: `延長賽突破僵局：${this.bases[1].name} 站上二壘` });
+      if (this.bases[1]) log.push({ s: $L(`延長賽突破僵局：${this.bases[1].name} 站上二壘`, `Extra innings: ${this.bases[1].name} starts on second`) });
       return this.ev('half', null, 2.6, log, msg);
     }
     if (this.newPA) {
@@ -260,12 +262,12 @@ class Game {
     const L = this.pLimit(P);
     let change = null;
     const outsHere = P.g.outs, newInning = this.outs === 0 && !this.bases.some(Boolean);
-    if (P.g.NP >= L) change = '體力耗盡';
-    else if (P.role === 'SP' && P.g.pR >= 7) change = '被打爆';
-    else if (P.g.NP >= L * 0.7 && this.bases.filter(Boolean).length >= 2 && P.g.pR >= 3) change = '陷入危機';
-    else if (P.role !== 'SP' && newInning && outsHere >= 3 && P._entry.inning < this.inning) change = '任務完成';
-    else if (P.role !== 'CL' && newInning && this.inning >= 9 && lead >= 1 && lead <= 3) change = '關門';
-    else if (P.role === 'SP' && newInning && this.inning >= 8 && lead >= 1 && lead <= 3 && P.g.NP > L * 0.6) change = '交給牛棚';
+    if (P.g.NP >= L) change = $t('體力耗盡');
+    else if (P.role === 'SP' && P.g.pR >= 7) change = $t('被打爆');
+    else if (P.g.NP >= L * 0.7 && this.bases.filter(Boolean).length >= 2 && P.g.pR >= 3) change = $t('陷入危機');
+    else if (P.role !== 'SP' && newInning && outsHere >= 3 && P._entry.inning < this.inning) change = $t('任務完成');
+    else if (P.role !== 'CL' && newInning && this.inning >= 9 && lead >= 1 && lead <= 3) change = $t('關門');
+    else if (P.role === 'SP' && newInning && this.inning >= 8 && lead >= 1 && lead <= 3 && P.g.NP > L * 0.6) change = $t('交給牛棚');
     if (change) {
       const rp = this.pickReliever(def, lead);
       if (rp) {
@@ -273,7 +275,7 @@ class Game {
         def.pitcher = rp; rp.g.GP = 1; rp._entry = { inning: this.inning, lead };
         this.refreshField(def);
         const role = POS_CN[rp.role];
-        return { log: [{ cls: 'change', s: `${def.team.full} 換投（${change}）：${P.name} 退場，${role} ${rp.name} 上場` }], banner: `換投 ${rp.name}` };
+        return { log: [{ cls: 'change', s: $L(`${def.team.full} 換投（${change}）：${P.name} 退場，${role} ${rp.name} 上場`, `${def.team.full} pitching change (${change}): ${P.name} out, ${role.toLowerCase()} ${rp.name} in`) }], banner: $L(`換投 ${rp.name}`, `Pitching change: ${rp.name}`) };
       }
     }
     // 代打：七局後落後或平手，打者太弱
@@ -287,7 +289,7 @@ class Game {
       if (ph && val(ph) > val(e.p) + 10 && R() < 0.7) {
         off.exited.add(e.p.id); off.entered.add(ph.id); ph.g.G = 1;
         const old = e.p; e.p = ph; this.refreshField(off);
-        return { log: [{ cls: 'change', s: `${off.team.full} 代打：${ph.name} 替換 ${old.name}（守${POS_SHORT[e.pos]}）` }], banner: `代打 ${ph.name}` };
+        return { log: [{ cls: 'change', s: $L(`${off.team.full} 代打：${ph.name} 替換 ${old.name}（守${POS_SHORT[e.pos]}）`, `${off.team.full} pinch hitter: ${ph.name} for ${old.name} (${POS_SHORT[e.pos]})`) }], banner: $L(`代打 ${ph.name}`, `Pinch hitter: ${ph.name}`) };
       }
     }
     return null;
@@ -322,7 +324,7 @@ class Game {
     const after = before + 1;
     if (before <= 0 && after > 0) { this.rec[oi].win = off.pitcher; this.rec[1 - oi].lose = pc; }
     if (before < 0 && after === 0) { this.rec[0].win = this.rec[1].win = null; this.rec[0].lose = this.rec[1].lose = null; }
-    if (tl) tl.t(t, '+1 分', P2(4, 10), this.teams[oi].bar, 1.3);
+    if (tl) tl.t(t, $t('+1 分'), P2(4, 10), this.teams[oi].bar, 1.3);
   }
   endPA() {
     const off = this.off();
@@ -355,7 +357,7 @@ class Game {
       const fin = wt.pitcher;
       if (fin !== w && fin._entry && fin._entry.lead >= 1 && fin._entry.lead <= 3 && fin.g.outs >= 1) fin.g.S = 1;
       this.teams[wi].W++; this.teams[li].L++;
-      res.push(`勝投 ${w.name}　敗投 ${l.name}` + (fin.g.S ? `　救援 ${fin.name}` : ''));
+      res.push($L(`勝投 ${w.name}　敗投 ${l.name}`, `W: ${w.name}   L: ${l.name}`) + (fin.g.S ? $L(`　救援 ${fin.name}`, `   SV: ${fin.name}`) : ''));
     } else { this.teams[0].T++; this.teams[1].T++; }
     this.result = res;
     for (const ts of this.ts) for (const p of ts.team.roster) for (const k in p.g) p.s[k] += p.g[k];
@@ -378,7 +380,7 @@ class Game {
     const fat = this.fatigue(P);
     const bProb = clamp(0.33 + (P.r.breaking - P.r.fastball) * 0.006 + (this.strikes === 2 ? 0.1 : 0) - (this.balls === 3 ? 0.12 : 0), 0.12, 0.65);
     const brk = R() < bProb;
-    const pname = brk ? pick(P.pitches) : '速球';
+    const pname = brk ? pick(P.pitches) : $t('速球');
     const velo = brk ? Math.round(P.velo - 10 - R() * 16) : Math.round(P.velo + gauss() * 1.3 - (1 - fat) * 14);
     const pq = (brk ? P.r.breaking : P.r.fastball) * fat + gauss() * 8;
     const ctl = P.r.control * fat;
@@ -410,32 +412,32 @@ class Game {
       tl.b(tPl, tPl + 0.07, plate, P2(0, -3), 2.5, 3, 0);
       const runnersOn = this.bases.some(Boolean);
       if (!swing && !inZ && R() < 0.011 * (1.45 - ctl / 100)) {
-        tl.t(tPl + 0.1, '觸身球', P2(B.bats === 'R' ? -6 : 6, 14), C_BAD, 1.1);
-        log.push({ s: `${B.name} 觸身球保送` });
+        tl.t(tPl + 0.1, $t('觸身球'), P2(B.bats === 'R' ? -6 : 6, 14), C_BAD, 1.1);
+        log.push({ s: $L(`${B.name} 觸身球保送`, `${B.name} is hit by the pitch`) });
         this.walk(tl, tPl + 0.4, B, P, true); paOver = true; walked = true;
       } else if (swing || inZ) {
         this.strikes++;
-        tl.t(tPl + 0.1, swing ? '揮空!' : '好球', P2(B.bats === 'R' ? -6 : 6, 14), C_GOOD, 1);
+        tl.t(tPl + 0.1, swing ? $t('揮空!') : $t('好球'), P2(B.bats === 'R' ? -6 : 6, 14), C_GOOD, 1);
         if (this.strikes >= 3) {
-          tl.t(tPl + 0.5, '三振!!', P2(0, 26), C_BAD, 1.6);
+          tl.t(tPl + 0.5, $t('三振!!'), P2(0, 26), C_BAD, 1.6);
           B.g.AB++; B.g.SO++; P.g.pSO++; this.addOut();
-          log.push({ cls: 'k', s: `${B.name} ${swing ? '揮棒落空' : '站著不動'}，三振出局（${pname} ${velo}km）` });
+          log.push({ cls: 'k', s: $L(`${B.name} ${swing ? '揮棒落空' : '站著不動'}，三振出局（${pname} ${velo}km）`, `${B.name} strikes out ${swing ? 'swinging' : 'looking'} (${pname}, ${velo} km/h)`) });
           paOver = true;
         }
       } else {
         this.balls++;
-        tl.t(tPl + 0.1, '壞球', P2(B.bats === 'R' ? -6 : 6, 14), C_INFO, 0.9);
+        tl.t(tPl + 0.1, $t('壞球'), P2(B.bats === 'R' ? -6 : 6, 14), C_INFO, 0.9);
         if (runnersOn && R() < 0.009 * (1.5 - ctl / 100)) {
           tl.b(tPl + 0.07, tPl + 0.6, P2(0, -3), P2(gauss() * 15, -36), 1, 0, 1);
           tl.m(F.C.id, tPl + 0.2, tPl + 1.2, P2(0, -32));
-          tl.t(tPl + 0.3, '暴投!', P2(0, 0), C_BAD, 1.2);
-          log.push({ s: `${P.name} 暴投，壘上跑者各推進一個壘包` });
+          tl.t(tPl + 0.3, $t('暴投!'), P2(0, 0), C_BAD, 1.2);
+          log.push({ s: $L(`${P.name} 暴投，壘上跑者各推進一個壘包`, `Wild pitch by ${P.name} — the runners move up`) });
           this.advanceAll(tl, tPl + 0.3, null);
           steal = null;
         }
         if (this.balls >= 4) {
-          tl.t(tPl + 0.5, '四壞保送', P2(0, 26), C_INFO, 1.2);
-          log.push({ s: `${B.name} 選到四壞球保送` });
+          tl.t(tPl + 0.5, $t('四壞保送'), P2(0, 26), C_INFO, 1.2);
+          log.push({ s: $L(`${B.name} 選到四壞球保送`, `${B.name} draws a walk`) });
           this.walk(tl, tPl + 0.6, B, P, false); paOver = true; walked = true;
         }
       }
@@ -450,15 +452,15 @@ class Game {
         const hang = 3.2 + R() * 1.3;
         tl.b(tPl, tPl + hang, plate, spot, 3, 5, 90);
         tl.m(f.id, tPl + 0.4, tPl + hang - 0.3, spot);
-        tl.t(tPl + hang, '界外接殺', spot, C_BAD, 1.1);
+        tl.t(tPl + hang, $t('界外接殺'), spot, C_BAD, 1.1);
         B.g.AB++; this.addOut();
-        log.push({ s: `${B.name} 擊出界外高飛球，被${POS_CN[who]} ${f.name} 接殺` });
+        log.push({ s: $L(`${B.name} 擊出界外高飛球，被${POS_CN[who]} ${f.name} 接殺`, `${B.name} fouls out to the ${POS_CN[who].toLowerCase()}, ${f.name}`) });
         paOver = true;
       } else {
         const spot = R() < 0.45 ? P2(gauss() * 20, -40) : P2(side * (60 + R() * 120), 20 + R() * 120);
         if (spot.y > 0 && Math.abs(spot.x) < spot.y + 5) spot.x = side * (spot.y + 20);
         tl.b(tPl, tPl + 1.0, plate, spot, 3, 0, 15 + R() * 30);
-        tl.t(tPl + 0.15, '界外', P2(side * 10, 14), '#ffffff', 0.9);
+        tl.t(tPl + 0.15, $t('界外'), P2(side * 10, 14), '#ffffff', 0.9);
         if (this.strikes < 2) this.strikes++;
       }
     } else {
@@ -482,12 +484,12 @@ class Game {
     const m = thr - runT + gauss() * 0.18;
     if (m > 0) {
       this.bases[1] = r; this.bases[0] = null; r.g.SB++;
-      tl.t(runT, '盜壘成功!', BASE[2], C_GOOD, 1.1);
-      log.push({ s: `${r.name} 盜上二壘成功！` });
+      tl.t(runT, $t('盜壘成功!'), BASE[2], C_GOOD, 1.1);
+      log.push({ s: $L(`${r.name} 盜上二壘成功！`, `${r.name} steals second!`) });
     } else {
       this.bases[0] = null; r.g.CS++; this.addOut();
-      tl.t(thr, '阻殺!', BASE[2], C_BAD, 1.2);
-      log.push({ s: `${r.name} 盜壘失敗，被捕手 ${C.name} 阻殺` });
+      tl.t(thr, $t('阻殺!'), BASE[2], C_BAD, 1.2);
+      log.push({ s: $L(`${r.name} 盜壘失敗，被捕手 ${C.name} 阻殺`, `${r.name} is caught stealing by catcher ${C.name}`) });
     }
   }
 
@@ -502,7 +504,7 @@ class Game {
       if (!cur) { carry = null; break; }
       carry = cur;
     }
-    if (carry) { tl.m(carry.id, t, t + 90 / 22, BASE[4]); this.scoreRun(carry, B, t + 90 / 22, tl); this.L.push({ s: `　→ 擠回一分，${carry.name} 得分` }); }
+    if (carry) { tl.m(carry.id, t, t + 90 / 22, BASE[4]); this.scoreRun(carry, B, t + 90 / 22, tl); this.L.push({ s: $L(`　→ 擠回一分，${carry.name} 得分`, `${$t('　')}→ a run is forced in, ${carry.name} scores`) }); }
   }
   advanceAll(tl, t, rbiB) {
     for (let i = 2; i >= 0; i--) {
@@ -536,7 +538,7 @@ class Game {
     const fd = fence(sp);
     const at = s => P2(dir.x * s, dir.y * s);
     const hAt = u => 4 * apex * u * (1 - u) + 3;
-    const type = la < 20 ? '平飛球' : la > 50 ? '內野高飛球' : '高飛球';
+    const type = la < 20 ? $t('平飛球') : la > 50 ? $t('內野高飛球') : $t('高飛球');
     if (full > fd && la >= 16) return this.homeRun(c, full, hang, apex);
     const wall = full > fd;
     const end = wall ? fd - 1 : full;
@@ -566,9 +568,9 @@ class Game {
       const a = arc(caught.u);
       tl.b(T(0), T(caught.tb), BASE[0], caught.pt, 3, a.h1, a.peak);
       tl.m(caught.f.id, T(caught.rx), T(Math.min(caught.tf, caught.tb)), caught.pt);
-      tl.t(T(caught.tb), '失誤!', caught.pt, C_BAD, 1.2);
+      tl.t(T(caught.tb), $t('失誤!'), caught.pt, C_BAD, 1.2);
       this.def().E++;
-      this.L.push({ cls: 'err', s: `${B.name} 擊出${type}，${POS_CN[caught.pos]} ${caught.f.name} 漏接失誤` });
+      this.L.push({ cls: 'err', s: $L(`${B.name} 擊出${type}，${POS_CN[caught.pos]} ${caught.f.name} 漏接失誤`, `${B.name} hits a ${type} — dropped by the ${POS_CN[caught.pos].toLowerCase()}, ${caught.f.name} (error)`) });
       const roll = P2(caught.pt.x + dir.x * 12, caught.pt.y + dir.y * 12);
       tl.b(T(caught.tb), T(caught.tb + 0.7), caught.pt, roll, 0, 0, 1);
       return this.runOnHit(c, { pos: caught.pos, f: caught.f, pt: roll, tR: caught.tb + 1.0, kind: 'fly', hang: caught.tb, err: true, desc: '' });
@@ -578,10 +580,10 @@ class Game {
       tl.b(T(0), T(caught.tb), BASE[0], caught.pt, 3, a.h1, a.peak);
       tl.m(caught.f.id, T(caught.rx), T(spectacular ? caught.tb : Math.min(caught.tf, caught.tb)), caught.pt);
       if (spectacular) tl.p(caught.f.id, T(caught.tb - 0.1), 'dive', 0.8);
-      tl.t(T(caught.tb), spectacular ? '美技接殺!!' : '接殺', P2(caught.pt.x, caught.pt.y + 10), spectacular ? C_GOLD : '#ffffff', spectacular ? 1.3 : 1);
+      tl.t(T(caught.tb), spectacular ? $t('美技接殺!!') : $t('接殺'), P2(caught.pt.x, caught.pt.y + 10), spectacular ? C_GOLD : '#ffffff', spectacular ? 1.3 : 1);
       B.g.AB++; this.addOut();
-      const where = OF.has(caught.pos) ? sprayName(sp) : POS_CN[caught.pos] + '方向';
-      this.L.push({ s: `${B.name} 擊出${where}${type}，被${POS_CN[caught.pos]} ${caught.f.name} ${spectacular ? '飛撲美技' : ''}接殺` });
+      const where = OF.has(caught.pos) ? sprayName(sp) : POS_CN[caught.pos] + $t('方向');
+      this.L.push({ s: $L(`${B.name} 擊出${where}${type}，被${POS_CN[caught.pos]} ${caught.f.name} ${spectacular ? '飛撲美技' : ''}接殺`, `${B.name} hits a ${type} to ${OF.has(caught.pos) ? sprayName(sp) : 'the ' + POS_CN[caught.pos].toLowerCase()} — ${spectacular ? 'a diving catch by' : 'caught by'} ${caught.f.name}`) });
       for (const pos of FIELD) if (pos !== caught.pos && OF.has(pos) && OF.has(caught.pos)) tl.m(F[pos].id, T(0.5), T(caught.tb), P2((POS_XY[pos].x * 2 + caught.pt.x) / 3, (POS_XY[pos].y * 2 + caught.pt.y) / 3));
       if (this.outs < 3) this.tagUps(c, caught);
       return;
@@ -613,8 +615,8 @@ class Game {
     tl.b(T(0), T(tL), BASE[0], L, 3, wall ? 8 : 0, a.peak + (wall ? 3 : 0));
     tl.b(T(tL), T(ret.t), L, ret.pt, wall ? 8 : 0, 0, wall ? 4 : 1.5);
     tl.m(ret.f.id, T(ret.rx), T(Math.min(ret.tf, ret.t)), ret.pt);
-    const desc = `${sprayName(sp)}${wall ? '大牆' : ''}`;
-    if (wall) tl.t(T(tL), '碰牆!', L, C_GOLD, 1);
+    const desc = $L(`${sprayName(sp)}${wall ? '大牆' : ''}`, wall ? `off the ${sprayName(sp)} wall` : `to ${sprayName(sp)}`);
+    if (wall) tl.t(T(tL), $t('碰牆!'), L, C_GOLD, 1);
     this.runOnHit(c, { pos: ret.pos, f: ret.f, pt: ret.pt, tR: ret.t + 0.3, kind: la < 20 ? 'liner' : 'fly', hang: tL, desc });
   }
 
@@ -630,11 +632,11 @@ class Game {
         tl.b(T(tC + xferT(f)), T(thr), cg.pt, P2(0, 2), 6, 3, 12);
         this.bases[2] = null;
         if (m + gauss() * 0.25 < 0) {
-          this.addOut(); tl.t(T(thr), '本壘觸殺!', BASE[0], C_BAD, 1.3);
-          this.L.push({ s: `　→ ${r3.name} 回壘衝本壘，被觸殺出局！雙殺` });
+          this.addOut(); tl.t(T(thr), $t('本壘觸殺!'), BASE[0], C_BAD, 1.3);
+          this.L.push({ s: $L(`　→ ${r3.name} 回壘衝本壘，被觸殺出局！雙殺`, `${$t('　')}→ ${r3.name} tags up and is thrown out at home! Double play`) });
         } else {
           this.scoreRun(r3, B, T(arr), tl); B.g.AB--;
-          this.L.push({ s: `　→ 高飛犧牲打，${r3.name} 回壘衝回本壘得分` });
+          this.L.push({ s: $L(`　→ 高飛犧牲打，${r3.name} 回壘衝回本壘得分`, `${$t('　')}→ sacrifice fly, ${r3.name} tags up and scores`) });
         }
         return;
       }
@@ -644,8 +646,8 @@ class Game {
       if (m > 0.6) {
         tl.m(r2.id, T(tC + 0.1), T(arr), BASE[3]);
         this.bases[1] = null;
-        if (m + gauss() * 0.25 < 0) { this.addOut(); tl.t(T(thr), '觸殺!', BASE[3], C_BAD, 1.2); this.L.push({ s: `　→ ${r2.name} 推進三壘被觸殺` }); }
-        else { this.bases[2] = r2; this.L.push({ s: `　→ ${r2.name} 回壘推進到三壘` }); }
+        if (m + gauss() * 0.25 < 0) { this.addOut(); tl.t(T(thr), $t('觸殺!'), BASE[3], C_BAD, 1.2); this.L.push({ s: $L(`　→ ${r2.name} 推進三壘被觸殺`, `${$t('　')}→ ${r2.name} is thrown out going to third`) }); }
+        else { this.bases[2] = r2; this.L.push({ s: $L(`　→ ${r2.name} 回壘推進到三壘`, `${$t('　')}→ ${r2.name} tags up and takes third`) }); }
       }
     }
   }
@@ -658,11 +660,11 @@ class Game {
     const fp = fence(sp) - 4;
     tl.m(F[near].id, T(0.4), T(hang * 0.9), P2(dir.x * fp, dir.y * fp));
     const n = this.bases.filter(Boolean).length + 1;
-    const big = n === 4 ? '滿貫全壘打!!!' : '全壘打!!';
+    const big = n === 4 ? $t('滿貫全壘打!!!') : $t('全壘打!!');
     tl.t(T(hang * 0.8), big, P2(dir.x * 260, dir.y * 260), C_GOLD, 1.8);
     B.g.AB++; B.g.H++; B.g.HR++; this.off().H++;
     const P = this.def().pitcher; P.g.pH++; P.g.pHR++;
-    this.L.push({ cls: 'hr', s: `${B.name} 轟出${sprayName(sp)}${n > 1 ? n + '分' : '陽春'}全壘打！飛行距離 ${Math.round(full)} 呎（初速 ${Math.round(c.ev * 1.609)}km/h）` });
+    this.L.push({ cls: 'hr', s: $L(`${B.name} 轟出${sprayName(sp)}${n > 1 ? n + '分' : '陽春'}全壘打！飛行距離 ${Math.round(full)} 呎（初速 ${Math.round(c.ev * 1.609)}km/h）`, `${B.name} homers to ${sprayName(sp)} — ${n === 4 ? 'a grand slam' : n > 1 ? `a ${n}-run shot` : 'a solo shot'}! ${Math.round(full)} ft (${Math.round(c.ev * 1.609)} km/h off the bat)`) });
     let t = 1.0;
     for (let i = 2; i >= 0; i--) {
       const r = this.bases[i]; if (!r) continue;
@@ -716,7 +718,7 @@ class Game {
     }
     roll(best.pt, best.t);
     tl.m(best.f.id, T(best.rx), T(best.t), best.pt);
-    const gap = Math.abs(sp) < 12 ? '穿越二遊間' : sp < 0 ? (sp < -30 ? '沿三壘邊線' : '穿越三遊間') : (sp > 30 ? '沿一壘邊線' : '穿越一二壘間');
+    const gap = Math.abs(sp) < 12 ? $t('穿越二遊間') : sp < 0 ? (sp < -30 ? $t('沿三壘邊線') : $t('穿越三遊間')) : (sp > 30 ? $t('沿一壘邊線') : $t('穿越一二壘間'));
     this.runOnHit(c, { pos: best.pos, f: best.f, pt: best.pt, tR: best.t + 0.3, kind: 'ground', hang: 0, desc: gap });
   }
 
@@ -727,7 +729,7 @@ class Game {
     const tF = fe.t + 0.15 + (R() < 0.25 ? 0.2 + R() * 0.5 : 0) + (dist(POS_XY[fe.pos], Fp) > 15 ? 0.25 : 0);
     const def = this.def();
     tl.m(f.id, T(fe.rx), T(fe.t - (dived ? 0.55 : 0)), Fp);
-    if (dived) { tl.p(f.id, T(fe.t - 0.65), 'dive', 0.7); tl.t(T(fe.t - 0.5), '飛撲!', Fp, C_GOLD, 1); }
+    if (dived) { tl.p(f.id, T(fe.t - 0.65), 'dive', 0.7); tl.t(T(fe.t - 0.5), $t('飛撲!'), Fp, C_GOLD, 1); }
     const bTime = 1.1 + (B.bats === 'L' ? -0.08 : 0) + 90 / runSpd(B);
     const lead = [10, 14, 12];
     const rArr = i => 0.25 + (90 - lead[i]) / runSpd(this.bases[i]);
@@ -759,8 +761,8 @@ class Game {
     // 失誤
     if (R() < 0.02 * (1.6 - f.r.defense / 100)) {
       def.E++;
-      tl.t(T(tF), '失誤!', Fp, C_BAD, 1.2);
-      this.L.push({ cls: 'err', s: `${B.name} 擊出${where}方向滾地球，${f.name} 處理失誤，打者上到一壘` });
+      tl.t(T(tF), $t('失誤!'), Fp, C_BAD, 1.2);
+      this.L.push({ cls: 'err', s: $L(`${B.name} 擊出${where}方向滾地球，${f.name} 處理失誤，打者上到一壘`, `${B.name} grounds to the ${where.toLowerCase()} — ${f.name} boots it, batter safe at first (error)`) });
       B.g.AB++;
       tl.m(B.id, T(0.7), T(bTime), BASE[1]);
       for (let i = 2; i >= 0; i--) {
@@ -803,8 +805,8 @@ class Game {
 
     if (throwErr) {
       def.E++;
-      tl.t(T(thrA), '暴傳!', BASE[target], C_BAD, 1.2);
-      this.L.push({ cls: 'err', s: `${B.name} 擊出${where}方向滾地球，${f.name} 傳球失誤，全員推進` });
+      tl.t(T(thrA), $t('暴傳!'), BASE[target], C_BAD, 1.2);
+      this.L.push({ cls: 'err', s: $L(`${B.name} 擊出${where}方向滾地球，${f.name} 傳球失誤，全員推進`, `${B.name} grounds to the ${where.toLowerCase()} — throwing error by ${f.name}, everyone moves up`) });
       B.g.AB++;
       for (let i = 2; i >= 0; i--) if (this.bases[i]) toBase(this.bases[i], i + 2);
       toBase(B, 1); B._unearned = true;
@@ -819,12 +821,12 @@ class Game {
     if (target === 1) {
       if (outAt) {
         outsMade = 1;
-        tl.t(T(thrA), '刺殺', BASE[1], '#ffffff', 1);
-        this.L.push({ s: `${B.name} 擊出${where}方向滾地球，${f.name} ${cv.self ? '自己踩壘' : '傳一壘'}刺殺出局` });
+        tl.t(T(thrA), $t('刺殺'), BASE[1], '#ffffff', 1);
+        this.L.push({ s: $L(`${B.name} 擊出${where}方向滾地球，${f.name} ${cv.self ? '自己踩壘' : '傳一壘'}刺殺出局`, `${B.name} grounds out to the ${where.toLowerCase()}, ${f.name}${cv.self ? ' (unassisted)' : ''}`) });
       } else {
         hit = true;
-        tl.t(T(bTime), '內野安打!', BASE[1], C_GOOD, 1.1);
-        this.L.push({ cls: 'hit', s: `${B.name} 擊出${where}方向滾地球，跑出內野安打！` });
+        tl.t(T(bTime), $t('內野安打!'), BASE[1], C_GOOD, 1.1);
+        this.L.push({ cls: 'hit', s: $L(`${B.name} 擊出${where}方向滾地球，跑出內野安打！`, `${B.name} beats out an infield single to the ${where.toLowerCase()}!`) });
         toBase(B, 0);
       }
       for (let i = 2; i >= 0; i--) {
@@ -838,19 +840,19 @@ class Game {
       const ri = target - 2, runner = this.bases[ri];
       if (outAt) {
         outsMade = 1;
-        tl.t(T(thrA), '封殺', BASE[target], '#ffffff', 1);
+        tl.t(T(thrA), $t('封殺'), BASE[target], '#ffffff', 1);
         // 雙殺
         if (outs0 + 1 < 3) {
           const piv = cv.p, c1 = cover(1);
           const relay = Math.max(thrA + xferT(piv) * 0.9 + dist(BASE[target], BASE[1]) / throwSpd(piv), c1.self ? 0 : c1.arrive);
           tl.b(T(thrA + xferT(piv) * 0.9), T(relay), BASE[target], BASE[1], 5, 5, 3);
-          if (roll(bTime - relay) > 0) { dp = true; outsMade = 2; tl.t(T(relay), '雙殺!!', BASE[1], C_BAD, 1.4); }
+          if (roll(bTime - relay) > 0) { dp = true; outsMade = 2; tl.t(T(relay), $t('雙殺!!'), BASE[1], C_BAD, 1.4); }
         }
-        this.L.push({ s: `${B.name} 擊出${where}方向滾地球，${dp ? `形成${target === 4 ? '本壘' : target + '壘'}－一壘雙殺！` : `${runner.name} 在${target === 4 ? '本壘' : target + '壘'}被封殺，打者上到一壘（野手選擇）`}` });
+        this.L.push({ s: $L(`${B.name} 擊出${where}方向滾地球，${dp ? `形成${target === 4 ? '本壘' : target + '壘'}－一壘雙殺！` : `${runner.name} 在${target === 4 ? '本壘' : target + '壘'}被封殺，打者上到一壘（野手選擇）`}`, `${B.name} grounds to the ${where.toLowerCase()} — ${dp ? `double play, ${baseEn(target)} to first!` : `${runner.name} forced out at ${baseEn(target)}, batter safe at first (fielder's choice)`}`) });
         if (!dp) toBase(B, 0);
       } else {
-        tl.t(T(runAt(target)), '安全上壘', BASE[target], C_GOOD, 0.9);
-        this.L.push({ s: `${B.name} 擊出${where}方向滾地球，野手選擇傳${target === 4 ? '本壘' : target + '壘'}不及，全員安全上壘` });
+        tl.t(T(runAt(target)), $t('安全上壘'), BASE[target], C_GOOD, 0.9);
+        this.L.push({ s: $L(`${B.name} 擊出${where}方向滾地球，野手選擇傳${target === 4 ? '本壘' : target + '壘'}不及，全員安全上壘`, `${B.name} grounds to the ${where.toLowerCase()} — the throw to ${baseEn(target)} is late, everyone safe (fielder's choice)`) });
         toBase(B, 0);
         toBase(runner, ri + 1);
       }
@@ -867,7 +869,7 @@ class Game {
     if (this.outs < 3) {
       for (const r of runs) {
         this.scoreRun(r, dp ? null : B, T(2.8), tl);
-        this.L.push({ s: `　→ ${r.name} 跑回本壘得分` });
+        this.L.push({ s: $L(`　→ ${r.name} 跑回本壘得分`, `${$t('　')}→ ${r.name} scores`) });
       }
     } else void isForceOut;
   }
@@ -929,26 +931,26 @@ class Game {
     let bk = list[list.length - 1].k;
     const batterOut = outRunner && outRunner.batter;
     const hitBases = batterOut ? bk - 1 : bk;
-    const names = ['', '一壘安打', '二壘安打', '三壘安打', '場內全壘打'];
+    const names = ['', $t('一壘安打'), $t('二壘安打'), $t('三壘安打'), $t('場內全壘打')];
     const OFF = this.off(), P = this.def().pitcher;
     B.g.AB++;
     if (!h.err) {
       B.g.H++; OFF.H++; P.g.pH++;
       if (hitBases === 2) B.g.D++; else if (hitBases === 3) B.g.T++; else if (hitBases === 4) B.g.HR++;
       tl.t(T(Math.min(h.tR, 2.5)), names[hitBases] + (hitBases >= 2 ? '!' : ''), P2(h.pt.x, h.pt.y + 12), hitBases >= 3 ? C_GOLD : C_GOOD, hitBases >= 2 ? 1.3 : 1.1);
-      this.L.push({ cls: 'hit', s: `${B.name} 擊出${h.desc}${names[hitBases]}` });
+      this.L.push({ cls: 'hit', s: $L(`${B.name} 擊出${h.desc}${names[hitBases]}`, `${B.name} ${['', 'singles', 'doubles', 'triples', 'circles the bases — an inside-the-park home run'][hitBases]} ${h.desc}`) });
     } else B._unearned = true;
     this.bases = nb;
     if (outRunner) {
       this.addOut();
-      tl.t(tOut, outRunner.k === 4 ? '本壘觸殺!' : '觸殺出局', BASE[outRunner.k], C_BAD, 1.2);
-      this.L.push({ s: `　→ ${outRunner.p.name} 衝${outRunner.k === 4 ? '本壘' : outRunner.k + '壘'}被觸殺出局` });
+      tl.t(tOut, outRunner.k === 4 ? $t('本壘觸殺!') : $t('觸殺出局'), BASE[outRunner.k], C_BAD, 1.2);
+      this.L.push({ s: $L(`　→ ${outRunner.p.name} 衝${outRunner.k === 4 ? '本壘' : outRunner.k + '壘'}被觸殺出局`, `${$t('　')}→ ${outRunner.p.name} is thrown out at ${baseEn(outRunner.k)}`) });
     }
     for (const r of scored) {
       const tScore = T(r.t);
       if (this.outs >= 3 && tScore > tOut) continue;
       this.scoreRun(r.p, h.err ? null : B, tScore, tl, h.err);
-      this.L.push({ s: `　→ ${r.p.name} 跑回本壘得分` });
+      this.L.push({ s: $L(`　→ ${r.p.name} 跑回本壘得分`, `${$t('　')}→ ${r.p.name} scores`) });
     }
   }
 }

@@ -248,8 +248,8 @@ function start(away, home, opts = {}) {
   for (const t of teams) for (const p of t.roster) { const h = homesMap.get(p.id); ents.set(p.id, { p, x: h.x, y: h.y, phase: Math.random() * 6, moving: false }); }
   ev = null; et = 0; gap = 0; banner = { text: `${teams[0].full} vs ${teams[1].full}`, t: 0, dur: 3 };
   $('log').innerHTML = '';
-  addLog([{ cls: 'inning', s: `比賽即將開始：${teams[0].full}（客）vs ${teams[1].full}（主）` },
-    { s: `先發投手：${game.ts[0].pitcher.name}（${teams[0].name}） vs ${game.ts[1].pitcher.name}（${teams[1].name}）` }]);
+  addLog([{ cls: 'inning', s: $L(`比賽即將開始：${teams[0].full}（客）vs ${teams[1].full}（主）`, `Play ball! ${teams[0].full} (away) vs ${teams[1].full} (home)`) },
+    { s: $L(`先發投手：${game.ts[0].pitcher.name}（${teams[0].name}） vs ${game.ts[1].pitcher.name}（${teams[1].name}）`, `Starting pitchers: ${game.ts[0].pitcher.name} (${teams[0].name}) vs ${game.ts[1].pitcher.name} (${teams[1].name})`) }]);
   setPlaying(!!opts.autoplay);
   $('btnSim').disabled = false; $('btnPlay').disabled = false;
   rosterTeam = 0; renderRosterSel(); refreshPanels();
@@ -302,9 +302,9 @@ function applySnap(sn) { snap = sn; homesMap = homes(sn); }
 function gameOver() {
   if (finished) return; finished = true;
   const [a, h] = snap.R;
-  const w = a === h ? '平手' : (a > h ? teams[0].full : teams[1].full) + ' 獲勝！';
-  banner = { text: `比賽結束 ${a} : ${h}　${w}`, t: 0, dur: 9999 };
-  addLog([{ cls: 'final', s: `比賽結束　${teams[0].full} ${a} : ${h} ${teams[1].full}　${w}` }].concat((game.result || []).map(s => ({ cls: 'final', s }))));
+  const w = a === h ? $t('平手') : (a > h ? teams[0].full : teams[1].full) + $t(' 獲勝！');
+  banner = { text: `${$t('比賽結束')} ${a} : ${h}${$t('　')}${w}`, t: 0, dur: 9999 };
+  addLog([{ cls: 'final', s: `${$t('比賽結束　')}${teams[0].full} ${a} : ${h} ${teams[1].full}${$t('　')}${w}` }].concat((game.result || []).map(s => ({ cls: 'final', s }))));
   setPlaying(false);
   $('btnPlay').disabled = true; $('btnSim').disabled = true;
   refreshPanels();
@@ -442,11 +442,12 @@ function drawHUD() {
   for (let i = 0; i < 2; i++) {
     const t = teams[i], ry = y + 36 + i * 50;
     ctx.fillStyle = t.bar; ctx.fillRect(x + 14, ry - 16, 10, 32);
-    outlined(t.full, x + 34, ry, 26, sn.offIdx === i && !sn.pregame && !sn.over ? '#ffc83a' : '#ffffff', 'left');
+    let px = 26; ctx.font = `bold ${px}px ${FONT}`; const tw = ctx.measureText(t.full).width; if (tw > 150) px = Math.max(14, Math.floor(px * 150 / tw));   // long English names shrink to fit
+    outlined(t.full, x + 34, ry, px, sn.offIdx === i && !sn.pregame && !sn.over ? '#ffc83a' : '#ffffff', 'left');
     ctx.font = 'bold 40px "Courier New", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#ff6a2a'; ctx.fillText(String(sn.R[i]), x + 212, ry + 2);
   }
   const ix = x + 268;
-  outlined(sn.pregame ? '賽前' : sn.over ? '終' : `${sn.inning}${sn.half ? '▼' : '▲'}`, ix + 6, y + 36, 26, '#ffc83a', 'center');
+  outlined(sn.pregame ? $t('賽前') : sn.over ? $t('終') : `${sn.inning}${sn.half ? '▼' : '▲'}`, ix + 6, y + 36, 26, '#ffc83a', 'center');
   const bx = ix + 92, by = y + 40;
   const dia = (cx, cy, on) => { ctx.save(); ctx.translate(cx, cy); ctx.rotate(Math.PI / 4); ctx.fillStyle = on ? '#ffc83a' : '#3a4157'; ctx.fillRect(-9, -9, 18, 18); ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.strokeRect(-9, -9, 18, 18); ctx.restore(); };
   dia(bx + 22, by, sn.bases[0]); dia(bx, by - 20, sn.bases[1]); dia(bx - 22, by, sn.bases[2]);
@@ -466,11 +467,11 @@ function drawBanner() {
 // ---------------- 面板 ----------------
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-const nm = p => esc(p.name) + (p.star ? ' <span class="star" title="傳說球員">★</span>' : '') + (p.rarity ? ` <span class="rar r-${p.rarity}">${p.rarity}</span>` : '');
+const nm = p => esc(p.name) + (p.star ? $t(' <span class="star" title="傳說球員">★</span>') : '') + (p.rarity ? ` <span class="rar r-${p.rarity}">${p.rarity}</span>` : '');
 function addLog(items) {
   if (!items || !items.length) return;
-  const L = $('log'), half = snap && !snap.pregame ? `${snap.inning}${snap.half ? '下' : '上'} ` : '';
-  for (const it of items) { const d = document.createElement('div'); if (it.cls) d.className = it.cls; d.textContent = (it.cls === 'inning' || it.cls === 'final' || it.s.startsWith('　') ? '' : half) + it.s; L.prepend(d); }
+  const L = $('log'), half = snap && !snap.pregame ? `${snap.inning}${snap.half ? $L('下', '▼') : $L('上', '▲')} ` : '';
+  for (const it of items) { const d = document.createElement('div'); if (it.cls) d.className = it.cls; d.textContent = (it.cls === 'inning' || it.cls === 'final' || it.s.startsWith($t('　')) ? '' : half) + it.s; L.prepend(d); }
 }
 function gradeColor(v) { return v >= 90 ? '#ff8a3a' : v >= 80 ? '#ffc83a' : v >= 70 ? '#9be36a' : v >= 60 ? '#4cd07a' : v >= 50 ? '#8ab8f0' : v >= 40 ? '#9aa2bd' : '#e08080'; }
 function grade(v) { return v >= 90 ? 'S' : v >= 80 ? 'A' : v >= 70 ? 'B' : v >= 60 ? 'C' : v >= 50 ? 'D' : v >= 40 ? 'E' : 'F'; }
@@ -479,7 +480,7 @@ const skl = p => !p.sk || !p.sk.length || !window.SKILLS ? '' : `<div class="skc
 const ip = outs => `${Math.floor(outs / 3)}.${outs % 3}`;
 function refreshPanels() {
   const sn = snap, n = Math.max(9, sn.line[0].length, sn.line[1].length);
-  let h = '<tr><th>球隊</th>'; for (let i = 1; i <= n; i++) h += `<th>${i}</th>`; h += '<th>R</th><th>H</th><th>E</th></tr>';
+  let h = $t('<tr><th>球隊</th>'); for (let i = 1; i <= n; i++) h += `<th>${i}</th>`; h += '<th>R</th><th>H</th><th>E</th></tr>';
   for (let t = 0; t < 2; t++) {
     h += `<tr><td class="tn"><span class="chip" style="background:${teams[t].bar}"></span>${esc(teams[t].full)}</td>`;
     for (let i = 0; i < n; i++) { const v = sn.line[t][i], cur = !sn.pregame && !sn.over && sn.inning === i + 1 && sn.offIdx === t; h += `<td class="${cur ? 'cur' : ''}">${v === undefined ? '' : v}</td>`; }
@@ -489,15 +490,15 @@ function refreshPanels() {
   const defI = sn.pregame ? 1 : 1 - sn.offIdx, P = byId(sn.pitchers[defI]), B = sn.pregame ? game.ts[0].lineup[0].p : byId(sn.batter);
   const lim = game.pLimit(P), st = clamp(1 - P.g.NP / lim, 0, 1) * 100;
   $('cardP').innerHTML = `<h3><span class="chip" style="background:${P.team.bar}"></span>#${P.num} ${nm(P)} <span class="role">${POS_CN[P.role]}</span></h3>
-    <div class="sub">${P.throws === 'R' ? '右投' : '左投'}｜${P.velo}km｜${(P.pitches || []).join('、')}</div>
-    ${skl(P)}${bar('速球', P.r.fastball)}${bar('變化球', P.r.breaking)}${bar('控球', P.r.control)}${bar('體力', P.r.stamina)}${bar('剩餘', st, st > 50 ? '#4cd07a' : st > 25 ? '#ffc83a' : '#ff5a5a')}
-    <div class="line">本場：${ip(P.g.outs)}局 ${P.g.NP}球 被安${P.g.pH} 失${P.g.pR} 四壞${P.g.pBB} 三振${P.g.pSO}</div>`;
+    <div class="sub">${P.throws === 'R' ? $t('右投') : $t('左投')}${$t('｜')}${P.velo}km${$t('｜')}${(P.pitches || []).join($t('、'))}</div>
+    ${skl(P)}${bar($t('速球'), P.r.fastball)}${bar($t('變化球'), P.r.breaking)}${bar($t('控球'), P.r.control)}${bar($t('體力'), P.r.stamina)}${bar($t('剩餘'), st, st > 50 ? '#4cd07a' : st > 25 ? '#ffc83a' : '#ff5a5a')}
+    <div class="line">${$L(`本場：${ip(P.g.outs)}局 ${P.g.NP}球 被安${P.g.pH} 失${P.g.pR} 四壞${P.g.pBB} 三振${P.g.pSO}`, `Today: ${ip(P.g.outs)} IP · ${P.g.NP} pitches · ${P.g.pH} H · ${P.g.pR} R · ${P.g.pBB} BB · ${P.g.pSO} K`)}</div>`;
   const e = (sn.lineups[sn.pregame ? 0 : sn.offIdx] || []).find(x => x.id === B.id), g = B.g;
-  const line = g.AB || g.BB ? `${g.AB}打數${g.H}安打${g.HR ? ' ' + g.HR + '轟' : ''}${g.RBI ? ' ' + g.RBI + '打點' : ''}${g.BB ? ' ' + g.BB + '保送' : ''}${g.SO ? ' ' + g.SO + '三振' : ''}` : '本場首打席';
+  const line = g.AB || g.BB ? $L(`${g.AB}打數${g.H}安打${g.HR ? ' ' + g.HR + '轟' : ''}${g.RBI ? ' ' + g.RBI + '打點' : ''}${g.BB ? ' ' + g.BB + '保送' : ''}${g.SO ? ' ' + g.SO + '三振' : ''}`, `${g.H}-for-${g.AB}${g.HR ? ', ' + g.HR + ' HR' : ''}${g.RBI ? ', ' + g.RBI + ' RBI' : ''}${g.BB ? ', ' + g.BB + ' BB' : ''}${g.SO ? ', ' + g.SO + ' K' : ''}`) : $t('本場首打席');
   $('cardB').innerHTML = `<h3><span class="chip" style="background:${B.team.bar}"></span>#${B.num} ${nm(B)} <span class="role">${e ? POS_SHORT[e.pos] : POS_SHORT[B.pos]}</span></h3>
-    <div class="sub">${B.bats === 'R' ? '右打' : '左打'}</div>
-    ${skl(B)}${bar('打擊', B.r.contact)}${bar('力量', B.r.power)}${bar('選球', B.r.eye)}${bar('速度', B.r.speed)}${bar('守備', B.r.defense)}${bar('臂力', B.r.arm)}
-    <div class="line">本場：${line}</div>`;
+    <div class="sub">${B.bats === 'R' ? $t('右打') : $t('左打')}</div>
+    ${skl(B)}${bar($t('打擊'), B.r.contact)}${bar($t('力量'), B.r.power)}${bar($t('選球'), B.r.eye)}${bar($t('速度'), B.r.speed)}${bar($t('守備'), B.r.defense)}${bar($t('臂力'), B.r.arm)}
+    <div class="line">${$t('本場：')}${line}</div>`;
   if ($('pane-box').classList.contains('on')) renderBox();
 }
 function renderBox() {
@@ -506,10 +507,10 @@ function renderBox() {
     const ts = game.ts[t], team = teams[t], hitters = [];
     ts.lineup.forEach((e, i) => hitters.push({ p: e.p, pos: e.pos, slot: i + 1 }));
     for (const p of team.roster) if (p.role === 'H' && ts.exited.has(p.id)) hitters.push({ p, pos: p.pos, out: true });
-    h += `<h4><span class="chip" style="background:${team.bar}"></span>${esc(team.full)} 打擊</h4><table class="box"><tr><th>打者</th><th>守</th><th>打數</th><th>安打</th><th>全壘打</th><th>打點</th><th>得分</th><th>四壞</th><th>三振</th></tr>`;
-    for (const x of hitters) { const g = x.p.g; h += `<tr><td>${x.slot || ''} ${esc(x.p.name)}${x.out ? '（退）' : ''}</td><td>${POS_SHORT[x.pos] || x.pos}</td><td>${g.AB}</td><td>${g.H}</td><td>${g.HR}</td><td>${g.RBI}</td><td>${g.R}</td><td>${g.BB}</td><td>${g.SO}</td></tr>`; }
-    h += `</table><h4>${esc(team.full)} 投手</h4><table class="box"><tr><th>投手</th><th>局數</th><th>用球</th><th>被安</th><th>失分</th><th>四壞</th><th>三振</th><th></th></tr>`;
-    for (const p of team.roster) { if (p.role === 'H' || !ts.entered.has(p.id)) continue; const g = p.g; h += `<tr><td>${esc(p.name)} <small>${POS_SHORT[p.role]}</small></td><td>${ip(g.outs)}</td><td>${g.NP}</td><td>${g.pH}</td><td>${g.pR}</td><td>${g.pBB}</td><td>${g.pSO}</td><td>${g.W ? '勝' : g.L ? '敗' : g.S ? '救援' : ''}</td></tr>`; }
+    h += `<h4><span class="chip" style="background:${team.bar}"></span>${esc(team.full)} ${$t('打擊')}</h4><table class="box"><tr><th>${$t('打者')}</th><th>${$t('守')}</th><th>${$t('打數')}</th><th>${$t('安打')}</th><th>${$t('全壘打')}</th><th>${$t('打點')}</th><th>${$t('得分')}</th><th>${$t('四壞')}</th><th>${$t('三振')}</th></tr>`;
+    for (const x of hitters) { const g = x.p.g; h += `<tr><td>${x.slot || ''} ${esc(x.p.name)}${x.out ? $t('（退）') : ''}</td><td>${POS_SHORT[x.pos] || x.pos}</td><td>${g.AB}</td><td>${g.H}</td><td>${g.HR}</td><td>${g.RBI}</td><td>${g.R}</td><td>${g.BB}</td><td>${g.SO}</td></tr>`; }
+    h += `</table><h4>${esc(team.full)} ${$t('投手')}</h4><table class="box"><tr><th>${$t('投手')}</th><th>${$t('局數')}</th><th>${$t('用球')}</th><th>${$t('被安')}</th><th>${$t('失分')}</th><th>${$t('四壞')}</th><th>${$t('三振')}</th><th></th></tr>`;
+    for (const p of team.roster) { if (p.role === 'H' || !ts.entered.has(p.id)) continue; const g = p.g; h += `<tr><td>${esc(p.name)} <small>${POS_SHORT[p.role]}</small></td><td>${ip(g.outs)}</td><td>${g.NP}</td><td>${g.pH}</td><td>${g.pR}</td><td>${g.pBB}</td><td>${g.pSO}</td><td>${g.W ? $t('勝') : g.L ? $t('敗') : g.S ? $t('救援') : ''}</td></tr>`; }
     h += '</table>';
   }
   $('box').innerHTML = h;
@@ -522,15 +523,15 @@ function renderRosterSel() {
 }
 function renderRoster() {
   const t = teams[rosterTeam], cell = v => `<td><span class="g" style="background:${gradeColor(v)}">${grade(v)} ${v}</span></td>`;
-  let h = `<table class="box"><tr><th>野手</th><th>位置</th><th>打擊</th><th>力量</th><th>選球</th><th>速度</th><th>守備</th><th>臂力</th></tr>`;
+  let h = `<table class="box"><tr><th>${$t('野手')}</th><th>${$t('位置')}</th><th>${$t('打擊')}</th><th>${$t('力量')}</th><th>${$t('選球')}</th><th>${$t('速度')}</th><th>${$t('守備')}</th><th>${$t('臂力')}</th></tr>`;
   for (const p of t.roster.filter(p => p.role === 'H')) h += `<tr><td>#${p.num} ${nm(p)}</td><td>${POS_SHORT[p.pos]}</td>${cell(p.r.contact)}${cell(p.r.power)}${cell(p.r.eye)}${cell(p.r.speed)}${cell(p.r.defense)}${cell(p.r.arm)}</tr>`;
-  h += `</table><table class="box"><tr><th>投手</th><th>角色</th><th>球速</th><th>速球</th><th>變化球</th><th>控球</th><th>體力</th></tr>`;
+  h += `</table><table class="box"><tr><th>${$t('投手')}</th><th>${$t('角色')}</th><th>${$t('球速')}</th><th>${$t('速球')}</th><th>${$t('變化球')}</th><th>${$t('控球')}</th><th>${$t('體力')}</th></tr>`;
   for (const p of t.roster.filter(p => p.role !== 'H')) h += `<tr><td>#${p.num} ${nm(p)}</td><td>${POS_SHORT[p.role]}</td><td>${p.velo}</td>${cell(p.r.fastball)}${cell(p.r.breaking)}${cell(p.r.control)}${cell(p.r.stamina)}</tr>`;
   $('roster').innerHTML = h + '</table>';
 }
 
 // ---------------- 控制 ----------------
-function setPlaying(v) { playing = v; $('btnPlay').textContent = v ? '⏸ 暫停' : (snap && !snap.pregame ? '▶ 繼續' : '▶ 開始比賽'); }
+function setPlaying(v) { playing = v; $('btnPlay').textContent = v ? $t('⏸ 暫停') : (snap && !snap.pregame ? $t('▶ 繼續') : $t('▶ 開始比賽')); }
 $('btnPlay').onclick = () => setPlaying(!playing);
 $('speed').onchange = e => { speed = +e.target.value; };
 function simToEnd() {
@@ -543,8 +544,8 @@ function simToEnd() {
   addLog(logs.slice(-40)); refreshPanels(); gameOver();
 }
 $('btnSim').onclick = simToEnd;
-$('btnFx').onclick = () => { fxOn = !fxOn && canFilter; $('btnFx').textContent = fxOn ? '✨ 特效：開' : '✨ 特效：關'; try { localStorage.setItem('pbb.fx', fxOn ? 'on' : 'off'); } catch (e) { /* ignore */ } };
-$('btnFx').textContent = fxOn ? '✨ 特效：開' : '✨ 特效：關';
+$('btnFx').onclick = () => { fxOn = !fxOn && canFilter; $('btnFx').textContent = fxOn ? $t('✨ 特效：開') : $t('✨ 特效：關'); try { localStorage.setItem('pbb.fx', fxOn ? 'on' : 'off'); } catch (e) { /* ignore */ } };
+$('btnFx').textContent = fxOn ? $t('✨ 特效：開') : $t('✨ 特效：關');
 document.querySelectorAll('#match .tabs button').forEach(b => b.onclick = () => {
   document.querySelectorAll('#match .tabs button').forEach(x => x.classList.toggle('on', x === b));
   document.querySelectorAll('#match .pane').forEach(p => p.classList.toggle('on', p.id === 'pane-' + b.dataset.tab));
