@@ -669,6 +669,7 @@ function doOpen(kind, free, first) {
   m.querySelector('#flipAll').onclick = () => flips.forEach((f) => f.classList.add('open'));
   m.querySelector('#done').onclick = () => { clearInterval(t); closeModal(); render(); };
 }
+const REROLL_COST = 100000;
 function playerDialog(inst) {
   const c = card(inst), r = fs(inst), rar = RARITY[c.rarity], keys = c.role === 'H' ? [['contact', '打擊'], ['power', '力量'], ['eye', '選球'], ['speed', '速度'], ['defense', '守備'], ['arm', '臂力']] : [['fastball', '速球'], ['breaking', '變化球'], ['control', '控球'], ['stamina', '體力']];
   const st = inst.st, line = !st ? '還沒有出賽紀錄' : c.role === 'H' ? `${st.AB} 打數 ${st.H} 安打（打率 ${st.AB ? (st.H / st.AB).toFixed(3).replace(/^0/, '') : '.---'}）${st.HR} 轟 ${st.RBI} 打點` : `${Math.floor(st.outs / 3)}.${st.outs % 3} 局 ${st.pSO} 三振 防禦率 ${st.outs ? (st.pER * 27 / st.outs).toFixed(2) : '-'} ${st.W} 勝 ${st.L} 敗 ${st.S} 救援`;
@@ -683,17 +684,22 @@ function playerDialog(inst) {
     ${traits ? `<h4>特色</h4><ul class="skl trl">${traits}</ul>` : ''}
     <h4>裝備 <small class="muted">${S.gear.length ? '' : '到「抽卡」買裝備箱'}</small></h4><div class="eqs">${eq}</div>
     <p>Lv ${inst.lv} / ${LV_MAX}　${'★'.repeat(inst.stars)}${'☆'.repeat(STAR_MAX - inst.stars)}　${maxed ? '（等級已滿）' : `經驗 ${inst.xp} / ${xpNeed(inst.lv)}`}</p>
-    <h4>技能 <small class="muted">${(inst.sk || []).length} 個・技能完全隨機，Lv100／200／300／400／500 各得一次重骰機會</small></h4><ul class="skl">${(inst.sk || []).map((id) => { const k = SK[id]; return `<li class="g${k.grade}"><b style="color:${GR[k.grade].color}">${GR[k.grade].name}</b> ${esc(k.name)}<small>${SKILLS.desc(k)}</small></li>`; }).join('') || '<li class="muted">沒有技能</li>'}</ul>
+    <h4>技能 <small class="muted">${(inst.sk || []).length} 個・可指定一個技能重骰：用重骰機會（Lv100／200／300／400／500 各得一次，目前剩 <b>${rerolls(inst)}</b> 次），或花 🪙${REROLL_COST.toLocaleString()}</small></h4><ul class="skl">${(inst.sk || []).map((id, j) => { const k = SK[id]; return `<li class="g${k.grade} rr"><div><b style="color:${GR[k.grade].color}">${GR[k.grade].name}</b> ${esc(k.name)}<small>${SKILLS.desc(k)}</small></div>
+      <span class="rrb"><button data-rr="${j}" data-pay="free" ${rerolls(inst) > 0 ? '' : 'disabled'} title="用一次重骰機會">🎲 機會</button><button data-rr="${j}" data-pay="coin" ${S.coins >= REROLL_COST ? '' : 'disabled'} title="花 ${REROLL_COST} 金幣">🎲 🪙${REROLL_COST / 1000}K</button></span></li>`; }).join('') || '<li class="muted">沒有技能</li>'}</ul>
     <p class="muted">生涯：${line}</p>
     <div class="row"><button id="train" class="big" ${maxed || S.coins < 300 ? 'disabled' : ''}>💪 特訓（🪙300，經驗 +200）</button>
-    <button id="reroll" ${rerolls(inst) > 0 ? '' : 'disabled'} title="每 100 級獲得一次重骰機會">🎲 重骰技能（剩 ${rerolls(inst)} 次）</button>
     <button id="sell" ${inUse ? 'disabled title="在陣容中，請先換下"' : ''}>釋出（🪙${rar.sell * inst.stars}）</button><button id="close">關閉</button></div></div></div>`, 'wide');
   drawPortraits();
-  m.querySelector('#reroll').onclick = () => {
-    if (rerolls(inst) <= 0 || !confirm(`用掉一次機會，重骰 ${c.name} 的全部技能？`)) return;
-    inst.rru = (inst.rru || 0) + 1; inst.sk = SKILLS.rollSet(c, Math.random, (inst.sk || []).length);
-    save(); playerDialog(inst); toast('技能重骰完成！');
-  };
+  // reroll ONE chosen skill: the new one is random and never repeats a family the player already has
+  m.querySelectorAll('[data-rr]').forEach((b) => b.onclick = () => {
+    const j = +b.dataset.rr, free = b.dataset.pay === 'free', oldId = inst.sk[j];
+    if (free ? rerolls(inst) <= 0 : S.coins < REROLL_COST) return;
+    if (!confirm(`${free ? '用掉一次重骰機會' : `花 🪙${REROLL_COST.toLocaleString()}`}，重骰 ${c.name} 的「${SK[oldId].name}」？`)) return;
+    const id = SKILLS.rollOne(c, inst.sk); if (!id) return toast('沒有可以換的技能了');
+    if (free) inst.rru = (inst.rru || 0) + 1; else S.coins -= REROLL_COST;
+    inst.sk[j] = id; save(); nav(); playerDialog(inst);
+    toast(`「${SK[oldId].name}」→「${SK[id].name}」（${GR[SK[id].grade].name}）`);
+  });
   m.querySelector('#train').onclick = () => { S.coins -= 300; const n = gainXp(inst, 200); save(); playerDialog(inst); if (n) toast(`${c.name} 升到 Lv ${inst.lv}！${Math.floor(inst.lv / 100) > Math.floor((inst.lv - n) / 100) ? ' 🎲 獲得技能重骰機會' : ''}`); };
   m.querySelectorAll('[data-eq]').forEach((sel) => sel.onchange = () => {
     for (const g of S.gear) if (g.on === inst.uid && g.slot === sel.dataset.eq) g.on = null;

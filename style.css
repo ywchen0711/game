@@ -225,3 +225,7 @@ table.roster tr.in td { background: rgba(76,208,122,.07); }
 table.roster a { cursor: pointer; text-decoration: underline dotted; }
 table.roster small { color: var(--muted); }
 td small { font-size: 10px; }
+
+ul.skl li.rr { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.rrb { display: flex; gap: 4px; flex-shrink: 0; }
+.rrb button { font-size: 11px; padding: 2px 6px; }
