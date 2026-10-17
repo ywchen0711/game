@@ -13,10 +13,10 @@ const SLOT = {
 };
 const VAL = { N: [1, 2], R: [2, 3], SR: [3, 5], SSR: [5, 7], UR: [7, 10] };
 const NSTAT = { N: 1, R: 1, SR: 2, SSR: 2, UR: 3 };
-const SELL_G = { N: 20, R: 50, SR: 150, SSR: 400, UR: 1200 }, SELL_C = { N: 50, R: 120, SR: 350, SSR: 900, UR: 2500 };
+const SELL_G = { N: 10, R: 25, SR: 75, SSR: 200, UR: 600 }, SELL_C = { N: 25, R: 60, SR: 175, SSR: 450, UR: 1250 };
 const BOXES = {
-  gear:   { name: $t('裝備箱'), desc: $t('3 件隨機裝備'), cost: 800, n: 3, type: 'gear', odds: { N: 50, R: 30, SR: 14, SSR: 5, UR: 1 } },
-  coach:  { name: $t('教練合約'), desc: $t('簽下 1 位隨機教練'), cost: 1500, n: 1, type: 'coach', odds: { N: 45, R: 32, SR: 16, SSR: 6, UR: 1 } },
+  gear:   { name: $t('裝備箱'), desc: $t('3 件隨機裝備'), cost: 1500, n: 3, type: 'gear', odds: { N: 50, R: 30, SR: 14, SSR: 5, UR: 1 } },
+  coach:  { name: $t('教練合約'), desc: $t('簽下 1 位隨機教練'), cost: 3000, n: 1, type: 'coach', odds: { N: 45, R: 32, SR: 16, SSR: 6, UR: 1 } },
   gear2:  { name: $t('高級裝備箱'), desc: $t('盃賽獎品：3 件 SR 以上裝備'), reward: true, n: 3, type: 'gear', odds: { SR: 70, SSR: 24, UR: 6 } },
   coach2: { name: $t('名教練合約'), desc: $t('盃賽獎品：1 位 SR 以上教練'), reward: true, n: 1, type: 'coach', odds: { SR: 65, SSR: 28, UR: 7 } },
 };

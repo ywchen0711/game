@@ -7,13 +7,13 @@ function rng(seed) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79
 
 // ---------------- 稀有度 ----------------
 const RARITY = {
-  N:   { name: 'N',   color: '#9aa2bd', glow: '#cfd5e8', ovr: [38, 50], cap: 500, sell: 30 },
-  R:   { name: 'R',   color: '#4cd07a', glow: '#a8f5c0', ovr: [48, 60], cap: 500, sell: 80 },
-  SR:  { name: 'SR',  color: '#4a9aff', glow: '#a8d0ff', ovr: [58, 70], cap: 500, sell: 200 },
-  SSR: { name: 'SSR', color: '#c06aff', glow: '#e4c0ff', ovr: [68, 80], cap: 500, sell: 600 },
-  UR:  { name: 'UR',  color: '#ffc83a', glow: '#fff0a0', ovr: [80, 88], cap: 500, sell: 2000 },
-  LR:  { name: 'LR',  color: '#ff5a4a', glow: '#ffc0a8', ovr: [87, 93], cap: 500, sell: 5000 },
-  EX:  { name: 'EX',  color: '#ff6ad5', glow: '#ffd0f4', ovr: [95, 99], cap: 500, sell: 20000, hidden: true },   // 隱藏超級球員
+  N:   { name: 'N',   color: '#9aa2bd', glow: '#cfd5e8', ovr: [38, 50], cap: 500, sell: 15 },
+  R:   { name: 'R',   color: '#4cd07a', glow: '#a8f5c0', ovr: [48, 60], cap: 500, sell: 40 },
+  SR:  { name: 'SR',  color: '#4a9aff', glow: '#a8d0ff', ovr: [58, 70], cap: 500, sell: 100 },
+  SSR: { name: 'SSR', color: '#c06aff', glow: '#e4c0ff', ovr: [68, 80], cap: 500, sell: 300 },
+  UR:  { name: 'UR',  color: '#ffc83a', glow: '#fff0a0', ovr: [80, 88], cap: 500, sell: 1000 },
+  LR:  { name: 'LR',  color: '#ff5a4a', glow: '#ffc0a8', ovr: [87, 93], cap: 500, sell: 2500 },
+  EX:  { name: 'EX',  color: '#ff6ad5', glow: '#ffd0f4', ovr: [95, 99], cap: 500, sell: 10000, hidden: true },   // 隱藏超級球員
 };
 const ORDER = ['N', 'R', 'SR', 'SSR', 'UR', 'LR', 'EX'];
 const HIT = ['contact', 'power', 'eye', 'speed', 'defense', 'arm'], PIT = ['fastball', 'breaking', 'control', 'stamina'];
@@ -38,7 +38,8 @@ const CHEN = [
 const SLOTS_H = ['C', 'C', '1B', '2B', 'SS', '3B', 'LF', 'CF', 'RF', '1B', '2B', 'SS', '3B', 'LF', 'CF', 'RF'];
 const SLOTS_P = ['SP', 'SP', 'SP', 'RP', 'RP', 'RP', 'CL', 'SP', 'RP', 'RP'];
 const COUNT = { N: 80, R: 60, SR: 40, SSR: 24, UR: 12, LR: 8, EX: 4 };              // the first 228 cards (ids 1-228 never change)
-const MORE = { N: 280, R: 210, SR: 140, SSR: 86, UR: 38, LR: 18 };                   // 772 more from a second seed: 1000 players in all
+const MORE = { N: 280, R: 210, SR: 140, SSR: 86, UR: 38, LR: 18 };                   // 772 more from a second seed: 1000 players
+const MORE2 = { N: 360, R: 270, SR: 180, SSR: 110, UR: 50, LR: 30 };                // and 1000 more from a third: 2000 players in all
 function buildPool() {
   const used = new Set(), pool = []; let cid = 1;
   const batch = (seed, counts) => {
@@ -56,7 +57,7 @@ function buildPool() {
       }
     }
   };
-  batch(20261017, COUNT); batch(20261099, MORE);
+  batch(20261017, COUNT); batch(20261099, MORE); batch(20261199, MORE2);
   for (const c of pool) addTraits(c);
   return pool;
   function finish(c, R) {
@@ -109,19 +110,22 @@ function addTraits(c) {
 }
 const canPlay = (c, pos) => pos === 'DH' || c.pos === pos || (c.alt || []).includes(pos);
 const POOL = buildPool();
-if (root.I18N && I18N.EN) for (const c of POOL) c.name = I18N.nm(c.name);      // English names: 陳冠宇 → Kuan-Yu Chen
+if (root.I18N && I18N.EN) {                                                   // English names: 陳冠宇 → Kuan-yu Chen; two that spell the same get Jr. / III
+  const seen = {};
+  for (const c of POOL) { const n = I18N.nm(c.name), k = (seen[n] = (seen[n] || 0) + 1); c.name = k === 1 ? n : n + (k === 2 ? ' Jr.' : ' ' + 'I'.repeat(k)); }
+}
 const BY_CID = Object.fromEntries(POOL.map(c => [c.cid, c]));
 
 // ---------------- 抽卡包 ----------------
 const PACKS = {
-  std:     { name: $t('標準球員包'), desc: $t('5 張球員卡'), cost: 500, n: 5, odds: { N: 57.82, R: 29, SR: 9.5, SSR: 3, UR: 0.5, LR: 0.15, EX: 0.03 } },
-  premium: { name: $t('高級球員包'), desc: $t('5 張，保證至少 1 張 SR 以上'), cost: 1500, n: 5, odds: { N: 0, R: 53.32, SR: 32, SSR: 12, UR: 2, LR: 0.6, EX: 0.08 }, guarantee: 'SR' },
-  pitch:   { name: $t('投手專門包'), desc: $t('5 張投手卡'), cost: 900, n: 5, odds: { N: 39.66, R: 36, SR: 17, SSR: 6, UR: 1, LR: 0.3, EX: 0.04 }, filter: (c) => c.role !== 'H' },
+  std:     { name: $t('標準球員包'), desc: $t('5 張球員卡'), cost: 1000, n: 5, odds: { N: 57.82, R: 29, SR: 9.5, SSR: 3, UR: 0.5, LR: 0.15, EX: 0.03 } },
+  premium: { name: $t('高級球員包'), desc: $t('5 張，保證至少 1 張 SR 以上'), cost: 3000, n: 5, odds: { N: 0, R: 53.32, SR: 32, SSR: 12, UR: 2, LR: 0.6, EX: 0.08 }, guarantee: 'SR' },
+  pitch:   { name: $t('投手專門包'), desc: $t('5 張投手卡'), cost: 1800, n: 5, odds: { N: 39.66, R: 36, SR: 17, SSR: 6, UR: 1, LR: 0.3, EX: 0.04 }, filter: (c) => c.role !== 'H' },
   star:    { name: $t('明星球員包'), desc: $t('盃賽獎品：5 張，保證至少 1 張 SSR 以上'), reward: true, n: 5, odds: { SR: 55, SSR: 33, UR: 9, LR: 2.7, EX: 0.3 }, guarantee: 'SSR' },
   legend:  { name: $t('傳說球員包'), desc: $t('盃賽獎品：5 張，保證至少 1 張 UR 以上'), reward: true, n: 5, odds: { SSR: 60, UR: 30, LR: 9, EX: 1 }, guarantee: 'UR' },
-  bat:     { name: $t('野手專門包'), desc: $t('5 張野手卡'), cost: 900, n: 5, odds: { N: 39.66, R: 36, SR: 17, SSR: 6, UR: 1, LR: 0.3, EX: 0.04 }, filter: (c) => c.role === 'H' },
+  bat:     { name: $t('野手專門包'), desc: $t('5 張野手卡'), cost: 1800, n: 5, odds: { N: 39.66, R: 36, SR: 17, SSR: 6, UR: 1, LR: 0.3, EX: 0.04 }, filter: (c) => c.role === 'H' },
 };
-const PITY = 30;            // every 30 packs without an SSR+, the next card is SSR or better
+const PITY = 50;            // every 50 packs without an SSR+, the next card is SSR or better
 function rollRarity(odds, R) {
   let x = R() * 100;
   for (const r of ORDER) { x -= odds[r] || 0; if (x < 0) return r; }

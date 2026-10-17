@@ -9,7 +9,8 @@ const EXS = POOL.filter((c) => c.rarity === 'EX');
 const { makeTeam, TEAMS, CITIES, newStats, POS_CN, POS_SHORT } = BB;
 const $ = (s) => document.querySelector(s), esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
-const KEY = 'pbb.club.v1', GAME = 'pixel-baseball';
+const KEY = 'pbb.club.v2', GAME = 'pixel-baseball-s2';     // season 2 of the save format: everyone starts over (old saves are ignored)
+try { localStorage.removeItem('pbb.club.v1'); localStorage.removeItem('pbb.club.v1__t'); } catch (e) { /* ignore */ }
 const DIVS = [
   { name: $t('業餘聯盟'), ovr: 44, coin: 1 }, { name: $t('二軍聯盟'), ovr: 53, coin: 1.5 }, { name: $t('職業聯盟'), ovr: 62, coin: 2 },
   { name: $t('明星聯盟'), ovr: 71, coin: 2.6 }, { name: $t('傳奇聯盟'), ovr: 80, coin: 3.2 }];
@@ -29,7 +30,7 @@ const COLORS = [
 
 // ---------------------------------------------------------------- save
 let S = null;
-function load() { try { const d = JSON.parse(localStorage.getItem(KEY)); return d && d.v === 1 ? d : null; } catch (e) { return null; } }
+function load() { try { const d = JSON.parse(localStorage.getItem(KEY)); return d && d.v === 2 ? d : null; } catch (e) { return null; } }
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* ignore */ }
   if (cloud) try { cloud.touch(GAME, KEY); } catch (e) { /* ignore */ }
@@ -56,7 +57,7 @@ function migrate() {
 }
 // a brand-new club: a rookie squad of N cards covering every position, plus starting coins
 function newClub(name, colorIdx) {
-  S = { v: 1, m2: 1, inv: {}, gear: [], coaches: [], staff: {}, nextItem: 1, coins: 2000, nextUid: 1, cards: [], dex: {}, pity: 0, lastFree: '', name: name || $t('我的球隊'), color: colorIdx || 0,
+  S = { v: 2, m2: 1, inv: {}, gear: [], coaches: [], staff: {}, nextItem: 1, coins: 500, nextUid: 1, cards: [], dex: {}, pity: 0, lastFree: '', name: name || $t('我的球隊'), color: colorIdx || 0,
     lineup: null, rotation: 0, league: null, history: [], packs: 0 };
   const N = POOL.filter((c) => c.rarity === 'N'), take = (pred, n) => { const out = []; for (const c of N) { if (out.length >= n) break; if (pred(c) && !S.cards.some((i) => i.cid === c.cid)) out.push(c); } return out; };
   const need = [['C', 2], ['1B', 1], ['2B', 1], ['SS', 1], ['3B', 1], ['LF', 1], ['CF', 1], ['RF', 1], ['SP', 5], ['RP', 6], ['CL', 1]];
@@ -233,7 +234,7 @@ function afterGame(res, mine, opp, meHome) {
   const [a, b] = myMatch(); record(a, b, res.R[0], res.R[1]);
   const oppIdx = a === 0 ? b : a; S.league.cpus[oppIdx - 1].rotation = opp.rotation;
   S.rotation = mine.rotation;
-  const coins = Math.round((win ? 260 : tie ? 160 : 100) * div.coin);
+  const coins = Math.round((win ? 80 : tie ? 50 : 30) * div.coin);
   S.coins += coins;
   const { ups, mvp } = gainFromGame(res, mine, my, win);
   S.league.recent.unshift({ round: S.league.round + 1, opp: teamName(oppIdx), me: rMe, them: rOp, home: meHome });
@@ -264,7 +265,7 @@ function gainFromGame(res, mine, my, win) {
 }
 function endSeason() {
   const st = standings(), rank = st.findIndex((r) => r.i === 0) + 1, L = S.league, div = DIVS[L.div];
-  const prize = Math.round([2500, 1400, 800, 600, 500, 400][rank - 1] * div.coin);
+  const prize = Math.round([800, 500, 300, 200, 150, 100][rank - 1] * div.coin);
   S.coins += prize;
   let move = 0;
   if (rank <= 2 && L.div < DIVS.length - 1) move = 1; else if (rank === 6 && L.div > 0) move = -1;
@@ -545,12 +546,12 @@ const bind = {
 
 // ---------------------------------------------------------------- cups: 8-team knockout tournaments; the further you go, the bigger the prize
 const CUPS = [
-  { name: $t('新人盃'), icon: '🌱', fee: 100, ovr: 46, coins: [800, 450, 250, 100], packs: [['premium', 'gear'], ['std'], [], []] },
-  { name: $t('地區盃'), icon: '🥉', fee: 400, ovr: 55, coins: [1800, 1000, 500, 200], packs: [['premium', 'premium', 'gear2'], ['premium', 'gear'], ['std'], []] },
-  { name: $t('全國盃'), icon: '🥈', fee: 1000, ovr: 64, coins: [4000, 2200, 1100, 400], packs: [['star', 'gear2', 'coach'], ['premium', 'premium', 'gear2'], ['premium'], []] },
-  { name: $t('亞洲盃'), icon: '🥇', fee: 2500, ovr: 73, coins: [8000, 4500, 2200, 800], packs: [['star', 'star', 'coach2', 'gear2'], ['star', 'gear2'], ['premium', 'premium'], ['std']] },
-  { name: $t('世界盃'), icon: '🌏', fee: 5000, ovr: 82, coins: [16000, 9000, 4500, 1600], packs: [['legend', 'coach2', 'gear2', 'gear2'], ['star', 'star', 'coach2'], ['star', 'gear2'], ['premium']] },
-  { name: $t('傳奇盃'), icon: '👑', fee: 10000, ovr: 92, coins: [32000, 18000, 9000, 3000], packs: [['legend', 'legend', 'coach2', 'coach2', 'gear2', 'gear2'], ['legend', 'coach2', 'gear2'], ['star', 'star', 'gear2'], ['star']] },
+  { name: $t('新人盃'), icon: '🌱', fee: 200, ovr: 46, coins: [300, 150, 80, 30], packs: [['std'], [], [], []] },
+  { name: $t('地區盃'), icon: '🥉', fee: 800, ovr: 55, coins: [700, 400, 200, 80], packs: [['premium'], ['std'], [], []] },
+  { name: $t('全國盃'), icon: '🥈', fee: 2000, ovr: 64, coins: [1600, 900, 450, 160], packs: [['premium', 'gear'], ['premium'], ['std'], []] },
+  { name: $t('亞洲盃'), icon: '🥇', fee: 5000, ovr: 73, coins: [3200, 1800, 900, 320], packs: [['star', 'gear2'], ['premium', 'gear'], ['premium'], []] },
+  { name: $t('世界盃'), icon: '🌏', fee: 10000, ovr: 82, coins: [6400, 3600, 1800, 640], packs: [['star', 'coach2', 'gear2'], ['star'], ['premium'], ['std']] },
+  { name: $t('傳奇盃'), icon: '👑', fee: 20000, ovr: 92, coins: [13000, 7200, 3600, 1200], packs: [['legend', 'coach2', 'gear2'], ['star', 'gear2'], ['star'], ['premium']] },
 ];
 const PLACE = [$t('冠軍'), $t('亞軍'), $t('四強'), $t('八強')], RNAME = [$t('八強賽'), $t('準決賽'), $t('決賽')];
 const packList = (ks) => { const n = {}; for (const k of ks) n[k] = (n[k] || 0) + 1; return Object.entries(n).map(([k, c]) => `${anyPack(k).name}${c > 1 ? '×' + c : ''}`).join($t('、')); };
@@ -655,7 +656,7 @@ function cupResultDialog(o) {
 }
 
 // ---------------------------------------------------------------- online versus: one room code, both clubs, the same seeded game on both screens
-const PVP_REWARD = { win: 400, tie: 200, loss: 150 }, PVP_DAILY = 10;
+const PVP_REWARD = { win: 120, tie: 60, loss: 40 }, PVP_DAILY = 5;
 const pvpId = Math.random().toString(36).slice(2, 10);
 let PV = null;                       // { role: 'host' | 'guest', code, ch, net, opp, guest, busy, hostFinal }
 function packPvp(t) {
@@ -812,7 +813,7 @@ function doOpen(kind, free, first) {
   m.querySelector('#flipAll').onclick = () => flips.forEach((f) => f.classList.add('open'));
   m.querySelector('#done').onclick = () => { clearInterval(t); closeModal(); render(); };
 }
-const REROLL_COST = 100000;
+const REROLL_COST = 100000, TRAIN_COST = 600;
 function playerDialog(inst) {
   const c = card(inst), r = fs(inst), rar = RARITY[c.rarity], keys = c.role === 'H' ? [['contact', $t('打擊')], ['power', $t('力量')], ['eye', $t('選球')], ['speed', $t('速度')], ['defense', $t('守備')], ['arm', $t('臂力')]] : [['fastball', $t('速球')], ['breaking', $t('變化球')], ['control', $t('控球')], ['stamina', $t('體力')]];
   const st = inst.st, line = !st ? $t('還沒有出賽紀錄') : c.role === 'H' ? $L(`${st.AB} 打數 ${st.H} 安打（打率 ${st.AB ? (st.H / st.AB).toFixed(3).replace(/^0/, '') : '.---'}）${st.HR} 轟 ${st.RBI} 打點`, `${st.H}-for-${st.AB} (${st.AB ? (st.H / st.AB).toFixed(3).replace(/^0/, '') : '.---'}) · ${st.HR} HR · ${st.RBI} RBI`) : $L(`${Math.floor(st.outs / 3)}.${st.outs % 3} 局 ${st.pSO} 三振 防禦率 ${st.outs ? (st.pER * 27 / st.outs).toFixed(2) : '-'} ${st.W} 勝 ${st.L} 敗 ${st.S} 救援`, `${Math.floor(st.outs / 3)}.${st.outs % 3} IP · ${st.pSO} K · ERA ${st.outs ? (st.pER * 27 / st.outs).toFixed(2) : '-'} · ${st.W}-${st.L} · ${st.S} SV`);
@@ -830,7 +831,7 @@ function playerDialog(inst) {
     <h4>${$t('技能')} <small class="muted">${$L(`${(inst.sk || []).length} 個・可指定一個技能重骰：用重骰機會（Lv100／200／300／400／500 各得一次，目前剩 <b>${rerolls(inst)}</b> 次），或花 🪙${REROLL_COST.toLocaleString()}`, `${(inst.sk || []).length} · Reroll one chosen skill with a reroll chance (one each at Lv100/200/300/400/500, <b>${rerolls(inst)}</b> left) or 🪙${REROLL_COST.toLocaleString()}`)}</small></h4><ul class="skl">${(inst.sk || []).map((id, j) => { const k = SK[id]; return `<li class="g${k.grade} rr"><div><b style="color:${GR[k.grade].color}">${GR[k.grade].name}</b> ${esc(k.name)}<small>${SKILLS.desc(k)}</small></div>
       <span class="rrb"><button data-rr="${j}" data-pay="free" ${rerolls(inst) > 0 ? '' : 'disabled'} title="${$t('用一次重骰機會')}">🎲 ${$t('機會')}</button><button data-rr="${j}" data-pay="coin" ${S.coins >= REROLL_COST ? '' : 'disabled'} title="${$L(`花 ${REROLL_COST} 金幣`, `Costs ${REROLL_COST} coins`)}">🎲 🪙${REROLL_COST / 1000}K</button></span></li>`; }).join('') || $t('<li class="muted">沒有技能</li>')}</ul>
     <p class="muted">${$t('生涯：')}${line}</p>
-    <div class="row"><button id="train" class="big" ${maxed || S.coins < 300 ? 'disabled' : ''}>💪 ${$t('特訓（')}🪙300${$t('，經驗 +200）')}</button>
+    <div class="row"><button id="train" class="big" ${maxed || S.coins < TRAIN_COST ? 'disabled' : ''}>💪 ${$t('特訓（')}🪙${TRAIN_COST}${$t('，經驗 +200）')}</button>
     <button id="sell" ${inUse ? $t('disabled title="在陣容中，請先換下"') : ''}>${$t('釋出（')}🪙${rar.sell * inst.stars}${$t('）')}</button><button id="close">${$t('關閉')}</button></div></div></div>`, 'wide');
   drawPortraits();
   // reroll ONE chosen skill: the new one is random and never repeats a family the player already has
@@ -843,7 +844,7 @@ function playerDialog(inst) {
     inst.sk[j] = id; save(); nav(); playerDialog(inst);
     toast(`${$t('「')}${SK[oldId].name}${$t('」')}→${$t('「')}${SK[id].name}${$t('」（')}${GR[SK[id].grade].name}${$t('）')}`);
   });
-  m.querySelector('#train').onclick = () => { S.coins -= 300; const n = gainXp(inst, 200); save(); playerDialog(inst); if (n) toast(`${c.name} ${$L('升到', 'reached')} Lv ${inst.lv}${$t('！')}${Math.floor(inst.lv / 100) > Math.floor((inst.lv - n) / 100) ? $t(' 🎲 獲得技能重骰機會') : ''}`); };
+  m.querySelector('#train').onclick = () => { if (S.coins < TRAIN_COST) return; S.coins -= TRAIN_COST; const n = gainXp(inst, 200); save(); playerDialog(inst); if (n) toast(`${c.name} ${$L('升到', 'reached')} Lv ${inst.lv}${$t('！')}${Math.floor(inst.lv / 100) > Math.floor((inst.lv - n) / 100) ? $t(' 🎲 獲得技能重骰機會') : ''}`); };
   m.querySelectorAll('[data-eq]').forEach((sel) => sel.onchange = () => {
     for (const g of S.gear) if (g.on === inst.uid && g.slot === sel.dataset.eq) g.on = null;
     const g = S.gear.find((x) => x.id === +sel.value); if (g) g.on = inst.uid;
