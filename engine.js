@@ -3,7 +3,7 @@
 (function (root) {
 'use strict';
 
-const R = Math.random;
+let R = Math.random;                 // 連線對戰時換成同一個種子的亂數，兩邊算出同一場比賽
 function gauss() { let u = 0, v = 0; while (u === 0) u = R(); while (v === 0) v = R(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -953,7 +953,7 @@ class Game {
   }
 }
 
-const api = { Game, makeTeam, makeMatch, addStars, STARS, TEAMS, CITIES, POS_XY, BASE, FIELD, OF, POS_CN, POS_SHORT, fence, newStats };
+const api = { setRng: (f) => { R = f || Math.random; }, Game, makeTeam, makeMatch, addStars, STARS, TEAMS, CITIES, POS_XY, BASE, FIELD, OF, POS_CN, POS_SHORT, fence, newStats };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 root.BB = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

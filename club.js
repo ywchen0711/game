@@ -279,7 +279,7 @@ const pager = (n, key) => n <= PER ? '' : `<div class="pager">${Array.from({ len
 const page = (list, key) => { pg[key] = Math.min(pg[key], Math.max(0, Math.ceil(list.length / PER) - 1)); return list.slice(pg[key] * PER, pg[key] * PER + PER); };
 const bindPager = () => document.querySelectorAll('[data-pg]').forEach((b) => b.onclick = () => { const [k, i] = b.dataset.pg.split(':'); pg[k] = +i; render(); scrollTo(0, 0); });
 function nav() {
-  const tabs = [['home', '🏟 主場'], ['packs', '🎴 抽卡'], ['lineup', '📋 陣容'], ['players', '🧢 球員'], ['items', '🎒 道具'], ['cup', '🏆 盃賽'], ['dex', '📖 圖鑑']];
+  const tabs = [['home', '🏟 主場'], ['packs', '🎴 抽卡'], ['lineup', '📋 陣容'], ['players', '🧢 球員'], ['items', '🎒 道具'], ['cup', '🏆 盃賽'], ['pvp', '⚔ 對戰'], ['dex', '📖 圖鑑']];
   $('#nav').innerHTML = tabs.map(([k, l]) => `<button data-nav="${k}" class="${screen === k ? 'on' : ''}">${l}</button>`).join('') + `<span class="coins">🪙 ${S.coins.toLocaleString()}</span>`;
   $('#nav').querySelectorAll('[data-nav]').forEach((b) => b.onclick = () => { screen = b.dataset.nav; render(); });
 }
@@ -288,7 +288,7 @@ function render() {
   $('#match').hidden = true; $('#club').hidden = false;
   nav();
   const el = $('#screen');
-  el.innerHTML = { home: homeHTML, packs: packsHTML, lineup: lineupHTML, players: playersHTML, items: itemsHTML, cup: cupHTML, dex: dexHTML }[screen]();
+  el.innerHTML = { home: homeHTML, packs: packsHTML, lineup: lineupHTML, players: playersHTML, items: itemsHTML, cup: cupHTML, pvp: pvpHTML, dex: dexHTML }[screen]();
   bind[screen] && bind[screen]();
   drawPortraits();
 }
@@ -512,6 +512,14 @@ const bind = {
     document.querySelectorAll('[data-sellc]').forEach((b) => b.onclick = () => { const c = S.coaches.find((x) => x.id === +b.dataset.sellc); if (!confirm(`與 ${c.name} 解約？`)) return; S.coins += ITEMS.SELL_C[c.rar]; S.coaches = S.coaches.filter((x) => x !== c); save(); render(); });
     document.querySelectorAll('[data-sellg]').forEach((b) => b.onclick = () => { const g = S.gear.find((x) => x.id === +b.dataset.sellg); if (!confirm(`賣出 ${g.name}？`)) return; S.coins += ITEMS.SELL_G[g.rar]; S.gear = S.gear.filter((x) => x !== g); save(); render(); });
   },
+  pvp() {
+    const h = $('#pvHost'); if (h) h.onclick = pvpHost;
+    const j = $('#pvJoin'); if (j) j.onclick = () => pvpJoin($('#pvCode').value);
+    const ci = $('#pvCode'); if (ci) ci.onkeydown = (e) => { if (e.key === 'Enter') pvpJoin(ci.value); };
+    const l = $('#pvLeave'); if (l) l.onclick = () => { pvpLeave(); render(); };
+    const a = $('#pvAgain'); if (a) a.onclick = () => { PV.ch.send({ t: 'again', from: pvpId }); PV.status = '已邀請再戰，等待對手⋯'; render(); };
+    const cp = $('#pvCopy'); if (cp) cp.onclick = () => { try { navigator.clipboard.writeText(PV.code); toast('已複製房號 ' + PV.code); } catch (e) { /* ignore */ } };
+  },
   cup() {
     document.querySelectorAll('[data-cup]').forEach((b) => b.onclick = () => { const k = +b.dataset.cup; if (!confirm(`報名${CUPS[k].name}？報名費 🪙${CUPS[k].fee.toLocaleString()}`)) return; cupEnter(k); render(); });
     const w = $('#cupWatch'); if (w) w.onclick = () => playCup(true);
@@ -641,6 +649,136 @@ function cupResultDialog(o) {
   m.querySelector('#ok').onclick = () => { closeModal(); screen = f && f.packs.length ? 'packs' : 'cup'; render(); };
 }
 
+// ---------------------------------------------------------------- online versus: one room code, both clubs, the same seeded game on both screens
+const PVP_REWARD = { win: 400, tie: 200, loss: 150 }, PVP_DAILY = 10;
+const pvpId = Math.random().toString(36).slice(2, 10);
+let PV = null;                       // { role: 'host' | 'guest', code, ch, net, opp, guest, busy, hostFinal }
+function packPvp(t) {
+  return Object.assign(Object.fromEntries(TKEYS.map((k) => [k, t[k]])), {
+    roster: t.roster.map((p) => Object.assign(Object.fromEntries(PKEYS.map((k) => [k, p[k]])), { uid: p.uid, lookSeed: p.lookSeed, star: p.star, rarity: p.rarity })),
+    order: t.order.map((o) => ({ id: o.p.id, pos: o.pos })), ovr: teamOvr() });
+}
+// both browsers build the two teams the same way: the guest's players get ids offset so they never clash with the host's
+function unpackPvp(d, off) {
+  const t = unpackTeam(d);
+  for (const p of t.roster) p.id += off;
+  t.order = d.order.map((o) => ({ p: t.roster.find((p) => p.id === o.id + off), pos: o.pos }));
+  return t;
+}
+function pvpHost() {
+  if (lineupProblems().length) return toast('陣容不完整，請先到「陣容」調整');
+  pvpLeave();
+  PV = { role: 'host', code: NET.code(), opp: null }; screen = 'pvp';
+  PV.ch = NET.join(PV.code, pvpMsg, (s) => { if (PV) { PV.net = s; pvpRefresh(); } });
+  render();
+}
+function pvpJoin(code) {
+  code = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (code.length !== 5) return toast('房號是 5 個英數字');
+  if (lineupProblems().length) return toast('陣容不完整，請先到「陣容」調整');
+  pvpLeave();
+  PV = { role: 'guest', code, opp: null }; screen = 'pvp';
+  PV.ch = NET.join(code, pvpMsg, (s) => { if (!PV) return; PV.net = s; if (s === 'ready') pvpHello(); pvpRefresh(); });
+  PV.knock = setInterval(() => { if (PV && !PV.busy && !PV.opp && PV.net === 'ready') pvpHello(); }, 2500);   // keep knocking until the host answers
+  render();
+}
+const pvpHello = () => PV && PV.ch.send({ t: 'join', from: pvpId, name: S.name, team: packPvp(myTeam()) });
+function pvpLeave() {
+  if (!PV) return;
+  clearInterval(PV.knock); PV.ch.send({ t: 'bye', from: pvpId });
+  const ch = PV.ch; setTimeout(() => ch.close(), 300); PV = null;
+}
+function pvpMsg(m) {
+  if (!PV || !m || m.from === pvpId) return;
+  if (m.t === 'join' && PV.role === 'host') {
+    if (PV.busy || (PV.guest && PV.guest !== m.from)) return;               // playing already, or the room is taken
+    if (lineupProblems().length) { toast('你的陣容不完整，無法開賽'); return; }
+    PV.guest = m.from; PV.opp = { name: m.name, ovr: m.team.ovr };
+    const seed = Math.floor(Math.random() * 2147483647), host = packPvp(myTeam());
+    PV.ch.send({ t: 'start', from: pvpId, to: m.from, seed, host, guest: m.team });
+    pvpPlay(seed, host, m.team);
+  } else if (m.t === 'start' && PV.role === 'guest' && m.to === pvpId && !PV.busy) {
+    PV.opp = { name: m.host.name, ovr: m.host.ovr };
+    pvpPlay(m.seed, m.host, m.guest);
+  } else if (m.t === 'again' && PV.role === 'guest' && !PV.busy) { PV.opp = null; pvpHello(); toast('房主邀請再戰！'); }
+  else if (m.t === 'final') PV.hostFinal = m.R;
+  else if (m.t === 'emo') floatEmo(m.e, PV.opp ? PV.opp.name : '對手');
+  else if (m.t === 'bye') {
+    toast('對手離開了房間');
+    if (!PV.busy) { if (PV.role === 'guest') pvpLeave(); else { PV.opp = null; PV.guest = null; } if (screen === 'pvp' && !$('#club').hidden) render(); }
+  }
+}
+function pvpStatusText() {
+  if (!PV) return '';
+  if (PV.net === 'error') return '❌ 連線失敗，請離開房間再試一次';
+  if (PV.net !== 'ready') return PV.net === 'reconnecting' ? '⏳ 重新連線中⋯' : '⏳ 連線中⋯';
+  if (PV.busy) return `⚔ 對戰中：vs ${PV.opp ? PV.opp.name : ''}`;
+  if (PV.role === 'host') return PV.opp ? `對手：${PV.opp.name}（戰力 ${PV.opp.ovr}）` : '✅ 房間已開好，把房號告訴朋友，對方加入後自動開賽';
+  return '✅ 已進入房間，等待房主回應⋯';
+}
+function pvpRefresh() { const el = $('#pvpStatus'); if (el) el.textContent = pvpStatusText(); }
+function pvpPlay(seed, hostPack, guestPack) {
+  PV.busy = true; PV.hostFinal = null; clearInterval(PV.knock); PV.knock = null;
+  const meHost = PV.role === 'host', away = unpackPvp(guestPack, 500000), home = unpackPvp(hostPack, 0);
+  if (away.bar === home.bar) { const alt = COLORS.find((c) => c.bar !== home.bar); Object.assign(away, { hat: alt.hat, shirt: alt.shirt, trim: alt.trim, pants: alt.pants, bar: alt.bar }); }
+  if (away.name === home.name) away.name = away.full = away.name + '（客）';
+  const mine = meHost ? home : away;
+  closeModal();
+  BB.setRng(CARDS.rng(seed));
+  $('#club').hidden = true; $('#match').hidden = false; pvpBar(true);
+  Match.start(away, home, { autoplay: true, onEnd: (res) => {
+    BB.setRng(null); pvpBar(false);
+    if (meHost && PV) PV.ch.send({ t: 'final', from: pvpId, R: res.R });
+    pvpResult(res, mine, meHost ? 1 : 0);
+  } });
+}
+function pvpBar(on) {
+  const old = $('#pvbar'); if (old) old.remove();
+  if (!on || !PV) return;
+  const bar = $('#match .bar'), d = document.createElement('span'); d.id = 'pvbar';
+  d.innerHTML = `<b>⚔ vs ${esc(PV.opp ? PV.opp.name : '')}</b>${['👏', '🔥', '😂', '😱', '💪', '🙏'].map((e) => `<button data-emo="${e}">${e}</button>`).join('')}`;
+  bar.insertBefore(d, bar.querySelector('.grow'));
+  d.querySelectorAll('[data-emo]').forEach((b) => b.onclick = () => { if (PV) PV.ch.send({ t: 'emo', from: pvpId, e: b.dataset.emo }); floatEmo(b.dataset.emo, '你'); });
+}
+function floatEmo(e, who) {
+  const box = $('#field') ? $('#field').getBoundingClientRect() : { left: innerWidth / 2, top: innerHeight / 2, width: 0, height: 0 };
+  const d = document.createElement('div'); d.className = 'emo'; d.innerHTML = `<span>${e}</span><small>${esc(who)}</small>`;
+  d.style.left = (box.left + box.width * (0.2 + Math.random() * 0.6)) + 'px'; d.style.top = (box.top + box.height * 0.6) + 'px';
+  document.body.appendChild(d); setTimeout(() => d.remove(), 2200);
+}
+function pvpResult(res, mine, my) {
+  const me = res.R[my], op = res.R[1 - my], win = me > op, tie = me === op, d = today();
+  S.pvp = Object.assign({ W: 0, L: 0, T: 0, n: 0, day: d }, S.pvp || {});
+  if (S.pvp.day !== d) { S.pvp.day = d; S.pvp.n = 0; }
+  S.pvp[win ? 'W' : tie ? 'T' : 'L']++;
+  let coins = 0;
+  if (S.pvp.n < PVP_DAILY) { coins = PVP_REWARD[win ? 'win' : tie ? 'tie' : 'loss']; S.pvp.n++; S.coins += coins; }
+  S.rotation = mine.rotation;
+  const { ups, mvp } = gainFromGame(res, mine, my, win);
+  save();
+  if (PV) PV.busy = false;
+  const host = PV && PV.role === 'host', opp = PV && PV.opp ? PV.opp.name : '對手';
+  const lv = ups.map((u) => `${esc(card(u.inst).name)} Lv${u.inst.lv}`).join('、');
+  const m = modal(`<h2>⚔ 連線對戰 vs ${esc(opp)}</h2><h2>${win ? '🎉 勝利！' : tie ? '平手' : '敗戰'}</h2><div class="big score">${me} : ${op}</div>
+    <p>${coins ? `🪙 +${coins}` : '今日的對戰獎勵已領完'}${mvp ? `　MVP：<b>${esc(mvp.name)}</b>` : ''}</p>${lv ? `<p class="good">升級：${lv}</p>` : ''}
+    <p class="muted">對戰戰績 ${S.pvp.W} 勝 ${S.pvp.L} 敗 ${S.pvp.T} 和</p>
+    <div class="row">${host ? '<button class="big" id="again">⚔ 再戰一場</button>' : ''}<button id="ok">回到對戰大廳</button></div>`);
+  const a = m.querySelector('#again'); if (a) a.onclick = () => { closeModal(); screen = 'pvp'; if (PV) { PV.ch.send({ t: 'again', from: pvpId }); } render(); };
+  m.querySelector('#ok').onclick = () => { closeModal(); screen = 'pvp'; render(); };
+}
+function pvpHTML() {
+  const p = S.pvp || { W: 0, L: 0, T: 0 }, used = S.pvp && S.pvp.day === today() ? S.pvp.n : 0, probs = lineupProblems();
+  const room = PV ? `<section class="panel room"><h3>${PV.role === 'host' ? '🏠 你的房間' : '🚪 已加入房間'}</h3>
+    <div class="code">${PV.code}${PV.role === 'host' ? '<button id="pvCopy">📋 複製</button>' : ''}</div>
+    <p id="pvpStatus">${pvpStatusText()}</p>
+    <div class="row">${PV.role === 'host' && PV.opp && !PV.busy ? '<button class="big" id="pvAgain">⚔ 再戰一場</button>' : ''}<button id="pvLeave">離開房間</button></div></section>` : '';
+  return `<section class="panel"><h3>⚔ 連線對戰 <small class="muted">和朋友用房號對打：雙方用各自的陣容、技能、裝備與教練，同一場比賽在兩邊同步上演。</small></h3>
+    <p>對戰戰績：<b>${p.W}</b> 勝 <b>${p.L}</b> 敗 <b>${p.T}</b> 和・你的球隊戰力 <b>${teamOvr()}</b>・今日還有 <b>${Math.max(0, PVP_DAILY - used)}</b> 場有金幣獎勵（勝 🪙${PVP_REWARD.win}／和 ${PVP_REWARD.tie}／敗 ${PVP_REWARD.loss}）</p>
+    ${probs.length ? `<p class="bad">⚠ ${probs.join('、')}，請先到「陣容」調整</p>` : ''}
+    ${PV ? '' : `<div class="packs pvpbtns"><div class="pack"><div class="pkart">🏠</div><h4>建立房間</h4><p>拿到 5 碼房號，傳給朋友</p><button class="big" id="pvHost" ${probs.length ? 'disabled' : ''}>建立房間</button></div>
+      <div class="pack"><div class="pkart">🚪</div><h4>加入房間</h4><p>輸入朋友給你的房號</p><input id="pvCode" maxlength="5" placeholder="K7QX2" autocomplete="off"><button class="big" id="pvJoin" ${probs.length ? 'disabled' : ''}>加入</button></div></div>`}</section>${room}`;
+}
+
 // ---------------------------------------------------------------- dialogs
 function modal(html, cls = '') { const m = $('#modal'); m.innerHTML = `<div class="dlg panel ${cls}">${html}</div>`; m.hidden = false; return m; }
 const closeModal = () => { $('#modal').hidden = true; };
@@ -740,5 +878,5 @@ migrate();
 if (S && !S.league) newSeason(0);
 render();
 cloudInit();
-window.__club = { get S() { return S; }, render, autoLineup, lineupProblems, openBoxDlg, fo, endSeason, playerDialog, cupEnter, playCup, CUPS, newClub, doOpen, playMatch, afterGame, setScreen: (k) => { screen = k; render(); } };
+window.__club = { get S() { return S; }, get PV() { return PV; }, pvpHost, pvpJoin, packPvp, unpackPvp, myTeam, render, autoLineup, lineupProblems, openBoxDlg, fo, endSeason, playerDialog, cupEnter, playCup, CUPS, newClub, doOpen, playMatch, afterGame, setScreen: (k) => { screen = k; render(); } };
 })();
