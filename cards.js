@@ -11,9 +11,11 @@ const RARITY = {
   R:   { name: 'R',   color: '#4cd07a', glow: '#a8f5c0', ovr: [48, 60], cap: 40, sell: 80 },
   SR:  { name: 'SR',  color: '#4a9aff', glow: '#a8d0ff', ovr: [58, 70], cap: 50, sell: 200 },
   SSR: { name: 'SSR', color: '#c06aff', glow: '#e4c0ff', ovr: [68, 80], cap: 60, sell: 600 },
-  UR:  { name: 'UR',  color: '#ffc83a', glow: '#fff0a0', ovr: [80, 90], cap: 70, sell: 2000 },
+  UR:  { name: 'UR',  color: '#ffc83a', glow: '#fff0a0', ovr: [80, 88], cap: 70, sell: 2000 },
+  LR:  { name: 'LR',  color: '#ff5a4a', glow: '#ffc0a8', ovr: [87, 93], cap: 80, sell: 5000 },
+  EX:  { name: 'EX',  color: '#ff6ad5', glow: '#ffd0f4', ovr: [95, 99], cap: 99, sell: 20000, hidden: true },   // 隱藏超級球員
 };
-const ORDER = ['N', 'R', 'SR', 'SSR', 'UR'];
+const ORDER = ['N', 'R', 'SR', 'SSR', 'UR', 'LR', 'EX'];
 const HIT = ['contact', 'power', 'eye', 'speed', 'defense', 'arm'], PIT = ['fastball', 'breaking', 'control', 'stamina'];
 const ADJ = {
   C: { defense: 8, arm: 10, speed: -14 }, '1B': { power: 9, defense: -6, speed: -8, contact: 2 }, '2B': { defense: 6, speed: 6, power: -6, contact: 3 },
@@ -26,16 +28,16 @@ const G1 = '志俊建家冠宗承柏彥睿子泓品宇哲嘉文信政明國偉�
 const G2 = '明傑宏豪宇翰恩廷哲瑋偉彬勳龍輝雄霖凱翔誠均軒鈞源達賢毅鋒威平安昌德民倫揚瑞弘竣';
 
 // ---------------- 卡池（固定種子生成，所有玩家相同） ----------------
-// 傳說卡：陳家四位明星 + 八位傳說球員
+// 隱藏超級球員（EX）：陳家四位明星，只有極低機率抽到，或在傳奇聯盟奪冠時獲得
 const CHEN = [
-  { name: 'Josh Chen', pos: 'CF', bats: 'L', throws: 'L', r: { contact: 94, power: 90, eye: 92, speed: 97, defense: 95, arm: 90 } },
-  { name: 'Jasper Chen', pos: 'SS', bats: 'R', throws: 'R', r: { contact: 96, power: 86, eye: 95, speed: 92, defense: 97, arm: 93 } },
-  { name: 'Jeff Chen', pos: 'SP', bats: 'R', throws: 'R', r: { fastball: 97, breaking: 95, control: 94, stamina: 96 } },
-  { name: 'Erin Lai', pos: 'CL', bats: 'R', throws: 'L', r: { fastball: 98, breaking: 97, control: 95, stamina: 70 } },
+  { name: 'Josh Chen', pos: 'CF', bats: 'L', throws: 'L', r: { contact: 97, power: 94, eye: 95, speed: 99, defense: 98, arm: 94 } },
+  { name: 'Jasper Chen', pos: 'SS', bats: 'R', throws: 'R', r: { contact: 99, power: 90, eye: 98, speed: 95, defense: 99, arm: 96 } },
+  { name: 'Jeff Chen', pos: 'SP', bats: 'R', throws: 'R', r: { fastball: 99, breaking: 97, control: 97, stamina: 99 } },
+  { name: 'Erin Lai', pos: 'CL', bats: 'R', throws: 'L', female: true, r: { fastball: 99, breaking: 99, control: 98, stamina: 78 } },
 ];
 const SLOTS_H = ['C', 'C', '1B', '2B', 'SS', '3B', 'LF', 'CF', 'RF', '1B', '2B', 'SS', '3B', 'LF', 'CF', 'RF'];
 const SLOTS_P = ['SP', 'SP', 'SP', 'RP', 'RP', 'RP', 'CL', 'SP', 'RP', 'RP'];
-const COUNT = { N: 80, R: 60, SR: 40, SSR: 24, UR: 12 };
+const COUNT = { N: 80, R: 60, SR: 40, SSR: 24, UR: 12, LR: 8, EX: 4 };
 function buildPool() {
   const R = rng(20261017), pick = (s) => s[Math.floor(R() * s.length)];
   const gauss = () => { let u = 0, v = 0; while (!u) u = R(); while (!v) v = R(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
@@ -44,11 +46,11 @@ function buildPool() {
   for (const rar of ORDER) {
     const [lo, hi] = RARITY[rar].ovr;
     for (let i = 0; i < COUNT[rar]; i++) {
-      if (rar === 'UR' && i < CHEN.length) { const c = CHEN[i]; pool.push(finish({ cid: cid++, rarity: rar, ...c, legend: true }, R)); continue; }
+      if (rar === 'EX') { const c = CHEN[i]; pool.push(finish({ cid: cid++, rarity: rar, ...c, legend: true, hidden: true }, R)); continue; }
       const pitcher = R() < 0.42, pos = pitcher ? SLOTS_P[i % SLOTS_P.length] : SLOTS_H[i % SLOTS_H.length], ovr = lo + R() * (hi - lo), r = {};
       if (pitcher) { for (const k of PIT) r[k] = ovr + gauss() * 6; r.stamina = pos === 'SP' ? ovr + 10 + gauss() * 5 : ovr - 18 + gauss() * 6; if (pos === 'CL') { r.fastball += 4; r.breaking += 3; } }
       else { for (const k of HIT) r[k] = ovr + gauss() * 8; for (const [k, v] of Object.entries(ADJ[pos] || {})) r[k] += v * 0.6; }
-      pool.push(finish({ cid: cid++, rarity: rar, name: name(), pos, bats: R() < 0.32 ? 'L' : 'R', throws: R() < 0.27 ? 'L' : 'R', r, legend: rar === 'UR' }, R));
+      pool.push(finish({ cid: cid++, rarity: rar, name: name(), pos, bats: R() < 0.32 ? 'L' : 'R', throws: R() < 0.27 ? 'L' : 'R', r, legend: rar === 'UR' || rar === 'LR' }, R));
     }
   }
   return pool;
@@ -70,10 +72,10 @@ const POOL = buildPool(), BY_CID = Object.fromEntries(POOL.map(c => [c.cid, c]))
 
 // ---------------- 抽卡包 ----------------
 const PACKS = {
-  std:     { name: '標準球員包', desc: '5 張球員卡', cost: 500, n: 5, odds: { N: 58, R: 29, SR: 9.5, SSR: 3, UR: 0.5 } },
-  premium: { name: '高級球員包', desc: '5 張，保證至少 1 張 SR 以上', cost: 1500, n: 5, odds: { N: 0, R: 54, SR: 32, SSR: 12, UR: 2 }, guarantee: 'SR' },
-  pitch:   { name: '投手專門包', desc: '5 張投手卡', cost: 900, n: 5, odds: { N: 40, R: 36, SR: 17, SSR: 6, UR: 1 }, filter: (c) => c.role !== 'H' },
-  bat:     { name: '野手專門包', desc: '5 張野手卡', cost: 900, n: 5, odds: { N: 40, R: 36, SR: 17, SSR: 6, UR: 1 }, filter: (c) => c.role === 'H' },
+  std:     { name: '標準球員包', desc: '5 張球員卡', cost: 500, n: 5, odds: { N: 57.82, R: 29, SR: 9.5, SSR: 3, UR: 0.5, LR: 0.15, EX: 0.03 } },
+  premium: { name: '高級球員包', desc: '5 張，保證至少 1 張 SR 以上', cost: 1500, n: 5, odds: { N: 0, R: 53.32, SR: 32, SSR: 12, UR: 2, LR: 0.6, EX: 0.08 }, guarantee: 'SR' },
+  pitch:   { name: '投手專門包', desc: '5 張投手卡', cost: 900, n: 5, odds: { N: 39.66, R: 36, SR: 17, SSR: 6, UR: 1, LR: 0.3, EX: 0.04 }, filter: (c) => c.role !== 'H' },
+  bat:     { name: '野手專門包', desc: '5 張野手卡', cost: 900, n: 5, odds: { N: 39.66, R: 36, SR: 17, SSR: 6, UR: 1, LR: 0.3, EX: 0.04 }, filter: (c) => c.role === 'H' },
 };
 const PITY = 30;            // every 30 packs without an SSR+, the next card is SSR or better
 function rollRarity(odds, R) {
@@ -124,11 +126,20 @@ function gainXp(inst, n) {
 // a card from a pack: a new player, a star-up, or experience if already maxed
 function addCard(save, card) {
   const have = save.cards.find(i => i.cid === card.cid);
-  if (!have) { const inst = { uid: save.nextUid++, cid: card.cid, lv: 1, xp: 0, stars: 1, s: null, num: null }; save.cards.push(inst); save.dex[card.cid] = 1; return { kind: 'new', inst }; }
-  if (have.stars < STAR_MAX) { have.stars++; return { kind: 'star', inst: have }; }
+  if (!have) { const inst = { uid: save.nextUid++, cid: card.cid, lv: 1, xp: 0, stars: 1, s: null, num: null, sk: SKILLS.rollSet(card) }; save.cards.push(inst); save.dex[card.cid] = 1; return { kind: 'new', inst }; }
+  if (have.stars < STAR_MAX) {
+    have.stars++;
+    let learned = null;                       // 3★ and 5★ each teach one more random skill
+    if (have.stars === 3 || have.stars === 5) { learned = SKILLS.rollOne(card, have.sk || []); if (learned) (have.sk = have.sk || []).push(learned); }
+    return { kind: 'star', inst: have, learned };
+  }
   const ups = gainXp(have, 600); return { kind: 'xp', inst: have, ups };
 }
 const isPitcher = (inst) => BY_CID[inst.cid].role !== 'H';
+// older saves: cards from before skills existed get theirs now (plus the star-up skills they'd have learned)
+function ensureSkills(save) {
+  for (const i of save.cards) if (!i.sk) { const c = BY_CID[i.cid]; i.sk = SKILLS.rollSet(c); for (const s of [3, 5]) if (i.stars >= s) { const id = SKILLS.rollOne(c, i.sk); if (id) i.sk.push(id); } }
+}
 
-root.CARDS = { RARITY, ORDER, POOL, BY_CID, PACKS, PITY, openPack, stats, ovr, gainXp, xpNeed, addCard, STAR_MAX, HIT, PIT, isPitcher, rng };
+root.CARDS = { RARITY, ORDER, POOL, BY_CID, PACKS, PITY, openPack, stats, ovr, gainXp, xpNeed, addCard, ensureSkills, STAR_MAX, HIT, PIT, isPitcher, rng };
 })(typeof window !== 'undefined' ? window : globalThis);

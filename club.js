@@ -2,7 +2,9 @@
 // 存檔放在 localStorage（雲端同步用大廳共用的 /save.js）。
 (function () {
 'use strict';
-const { RARITY, ORDER, POOL, BY_CID, PACKS, PITY, openPack, stats, ovr, gainXp, xpNeed, addCard, STAR_MAX, isPitcher } = CARDS;
+const { RARITY, ORDER, POOL, BY_CID, PACKS, PITY, openPack, stats, ovr, gainXp, xpNeed, addCard, ensureSkills, STAR_MAX, isPitcher } = CARDS;
+const SK = SKILLS.BY_ID, GR = SKILLS.GRADE;
+const EXS = POOL.filter((c) => c.rarity === 'EX');
 const { makeTeam, TEAMS, CITIES, newStats, POS_CN, POS_SHORT } = BB;
 const $ = (s) => document.querySelector(s), esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -32,15 +34,25 @@ function save() {
 }
 let cloud = null;
 async function cloudInit() {
-  try { cloud = await import('/save.js'); if (await cloud.pull(GAME, KEY)) { S = load(); render(); } setCloud('☁ 已同步'); }
+  try { cloud = await import('/save.js'); if (await cloud.pull(GAME, KEY)) { S = load(); migrate(); render(); } setCloud('☁ 已同步'); }
   catch (e) { cloud = null; setCloud('本機存檔'); }
 }
 function setCloud(t) { const e = $('#cloud'); if (e) e.textContent = t; }
 addEventListener('cloudsave', (e) => setCloud(e.detail.state === 'synced' ? '☁ 已同步' : e.detail.state === 'offline' ? '☁ 離線' : '☁ ' + e.detail.state));
 
+// saves from before the hidden tier: the four Chen-family UR cards (cid 205-208) become the hidden EX cards; everyone gets skills
+function migrate() {
+  if (!S) return;
+  if (!S.m2) {
+    const old = { 205: 'Josh Chen', 206: 'Jasper Chen', 207: 'Jeff Chen', 208: 'Erin Lai' };
+    for (const i of S.cards) if (old[i.cid] && i.sk == null) { const c = EXS.find((x) => x.name === old[i.cid]); delete S.dex[i.cid]; i.cid = c.cid; S.dex[c.cid] = 1; }
+    S.m2 = 1;
+  }
+  ensureSkills(S);
+}
 // a brand-new club: a rookie squad of N cards covering every position, plus starting coins
 function newClub(name, colorIdx) {
-  S = { v: 1, coins: 2000, nextUid: 1, cards: [], dex: {}, pity: 0, lastFree: '', name: name || '我的球隊', color: colorIdx || 0,
+  S = { v: 1, m2: 1, coins: 2000, nextUid: 1, cards: [], dex: {}, pity: 0, lastFree: '', name: name || '我的球隊', color: colorIdx || 0,
     lineup: null, rotation: 0, league: null, history: [], packs: 0 };
   const N = POOL.filter((c) => c.rarity === 'N'), take = (pred, n) => { const out = []; for (const c of N) { if (out.length >= n) break; if (pred(c) && !S.cards.some((i) => i.cid === c.cid)) out.push(c); } return out; };
   const need = [['C', 2], ['1B', 1], ['2B', 1], ['SS', 1], ['3B', 1], ['LF', 1], ['CF', 1], ['RF', 1], ['SP', 5], ['RP', 6], ['CL', 1]];
@@ -103,7 +115,7 @@ function playerOf(inst, pos, team) {
   const c = card(inst), r = stats(inst);
   if (pos && pos !== 'DH' && c.role === 'H' && c.pos !== pos) r.defense = Math.max(10, r.defense - 15);   // out of position
   return { id: 100000 + inst.uid, uid: inst.uid, name: c.name, num: inst.num, pos: pos || c.pos, role: c.role, bats: c.bats, throws: c.throws, r,
-    velo: c.velo, pitches: c.pitches, star: !!c.legend, rarity: c.rarity, lookSeed: c.look, team, g: newStats(), s: newStats() };
+    velo: c.velo, pitches: c.pitches, star: !!c.legend, rarity: c.rarity, lookSeed: c.look, sk: (inst.sk || []).slice(), team, g: newStats(), s: newStats() };
 }
 function myTeam() {
   numberCards();
@@ -125,10 +137,11 @@ function cpuTeam(style, city, div) {
     const keys = p.role === 'H' ? ['contact', 'power', 'eye', 'speed', 'defense', 'arm'] : ['fastball', 'breaking', 'control'];
     for (const k of keys) p.r[k] = Math.round(clamp(p.r[k] + shift + (Math.random() - 0.5) * 6, 12, 99));
     if (p.role !== 'H') p.velo = Math.round(138 + p.r.fastball * 0.21);
+    p.sk = SKILLS.rollCpu(p.role, div);
   }
   return t;
 }
-const TKEYS = ['name', 'hat', 'shirt', 'trim', 'pants', 'bar', 'city', 'full', 'rotation'], PKEYS = ['id', 'name', 'num', 'pos', 'role', 'bats', 'throws', 'r', 'velo', 'pitches'];
+const TKEYS = ['name', 'hat', 'shirt', 'trim', 'pants', 'bar', 'city', 'full', 'rotation'], PKEYS = ['id', 'name', 'num', 'pos', 'role', 'bats', 'throws', 'r', 'velo', 'pitches', 'sk'];
 const packTeam = (t) => Object.assign(Object.fromEntries(TKEYS.map((k) => [k, t[k]])), { roster: t.roster.map((p) => Object.fromEntries(PKEYS.map((k) => [k, p[k]]))) });
 function unpackTeam(d) { const t = Object.assign({}, d, { roster: [], W: 0, L: 0, T: 0 }); t.roster = d.roster.map((p) => Object.assign({}, p, { team: t, g: newStats(), s: newStats() })); return t; }
 
@@ -208,8 +221,10 @@ function endSeason() {
   let move = 0;
   if (rank <= 2 && L.div < DIVS.length - 1) move = 1; else if (rank === 6 && L.div > 0) move = -1;
   const tickets = rank === 1 ? 1 : 0; S.tickets = (S.tickets || 0) + tickets;
+  let ex = null;                                        // 傳奇聯盟冠軍：獲得一位隱藏超級球員（沒有的優先）
+  if (rank === 1 && L.div === DIVS.length - 1) { const miss = EXS.filter((c) => !S.dex[c.cid]), from = miss.length ? miss : EXS, c = from[Math.floor(Math.random() * from.length)]; ex = { card: c, res: addCard(S, c) }; }
   S.history.unshift({ season: L.season, div: L.div, rank, W: L.table[0].W, L: L.table[0].L });
-  const res = { rank, prize, move, tickets, from: L.div };
+  const res = { rank, prize, move, tickets, from: L.div, ex };
   newSeason(clamp(L.div + move, 0, DIVS.length - 1));
   return res;
 }
@@ -235,8 +250,9 @@ function cardHTML(c, inst, opts = {}) {
   const rar = RARITY[c.rarity], o = inst ? ovr(inst) : ovr({ cid: c.cid, lv: 1, xp: 0, stars: 1 }), hidden = opts.hidden;
   return `<div class="pcard r-${c.rarity} ${hidden ? 'unknown' : ''} ${opts.cls || ''}" ${inst ? `data-uid="${inst.uid}"` : `data-cid="${c.cid}"`} style="--rc:${rar.color};--rg:${rar.glow}">
     <div class="rar">${c.rarity}</div><canvas class="pf" width="60" height="64" data-port="${c.cid}" data-dark="${hidden ? 1 : 0}"></canvas>
-    <div class="pn">${hidden ? '？？？' : esc(c.name)}</div>
-    <div class="pp"><b>${PS[c.pos]}</b> ${hidden ? '' : `<span class="ov">${o}</span>`}</div>
+    <div class="pn">${hidden ? (c.rarity === 'EX' ? '隱藏球員' : '？？？') : esc(c.name)}</div>
+    <div class="pp"><b>${hidden && c.rarity === 'EX' ? '？？' : PS[c.pos]}</b> ${hidden ? '' : `<span class="ov">${o}</span>`}</div>
+    ${inst && inst.sk && inst.sk.length ? `<div class="sks">${inst.sk.map((id) => `<i style="background:${GR[SK[id].grade].color}" title="${SK[id].name}"></i>`).join('')}</div>` : ''}
     ${inst ? `<div class="pl">Lv${inst.lv} ${'★'.repeat(inst.stars)}<i><u style="width:${inst.lv >= RARITY[c.rarity].cap ? 100 : inst.xp / xpNeed(inst.lv) * 100}%"></u></i></div>` : ''}
   </div>`;
 }
@@ -283,9 +299,9 @@ function homeHTML() {
 }
 const today = () => new Date().toISOString().slice(0, 10);
 function packsHTML() {
-  return `<section class="panel"><h3>抽卡 <small class="muted">重複的球員會升星（最高 ${STAR_MAX}★），滿星後轉成經驗值。再抽 ${PITY - (S.pity || 0)} 包內必出 SSR 以上。</small></h3>
+  return `<section class="panel"><h3>抽卡 <small class="muted">重複的球員會升星（最高 ${STAR_MAX}★），滿星後轉成經驗值。再抽 ${PITY - (S.pity || 0)} 包內必出 SSR 以上。每張卡都會隨機獲得技能，3★、5★ 再學一個。傳說中還有 4 位隱藏超級球員⋯⋯</small></h3>
     <div class="packs">${Object.entries(PACKS).map(([k, p]) => `<div class="pack pk-${k}"><div class="pkart">🎴</div><h4>${p.name}</h4><p>${p.desc}</p>
-      <p class="odds">${ORDER.filter((r) => p.odds[r]).map((r) => `<span class="r-${r}">${r} ${p.odds[r]}%</span>`).join(' ')}</p>
+      <p class="odds">${ORDER.filter((r) => p.odds[r]).map((r) => `<span class="r-${r}">${r === 'EX' ? '隱藏' : r} ${p.odds[r]}%</span>`).join(' ')}</p>
       <button class="big" data-buy="${k}" ${S.coins < p.cost ? 'disabled' : ''}>🪙 ${p.cost.toLocaleString()}</button></div>`).join('')}</div></section>`;
 }
 function lineupHTML() {
@@ -312,10 +328,10 @@ function playersHTML() {
     <div class="grid">${list.map((i) => cardHTML(card(i), i)).join('')}</div></section>`;
 }
 function dexHTML() {
-  const have = (c) => !!S.dex[c.cid], n = POOL.filter(have).length;
+  const have = (c) => !!S.dex[c.cid], n = POOL.filter(have).length, total = POOL.length - EXS.filter((c) => !have(c)).length;
   const list = POOL.filter((c) => dexFilter === 'all' || c.rarity === dexFilter);
-  return `<section class="panel"><div class="bar"><h3>圖鑑 <small class="muted">收集 ${n} / ${POOL.length}</small></h3><span class="grow"></span>
-    ${['all', ...ORDER].map((r) => `<button data-df="${r}" class="${dexFilter === r ? 'on' : ''}">${r === 'all' ? '全部' : r} ${r === 'all' ? '' : POOL.filter((c) => c.rarity === r && have(c)).length + '/' + POOL.filter((c) => c.rarity === r).length}</button>`).join('')}</div>
+  return `<section class="panel"><div class="bar"><h3>圖鑑 <small class="muted">收集 ${n} / ${total}</small></h3><span class="grow"></span>
+    ${['all', ...ORDER].map((r) => `<button data-df="${r}" class="${dexFilter === r ? 'on' : ''}">${r === 'all' ? '全部' : r === 'EX' ? '隱藏' : r} ${r === 'all' ? '' : POOL.filter((c) => c.rarity === r && have(c)).length + '/' + (r === 'EX' ? '?' : POOL.filter((c) => c.rarity === r).length)}</button>`).join('')}</div>
     <div class="grid">${list.map((c) => cardHTML(c, null, { hidden: !have(c) })).join('')}</div></section>`;
 }
 const bind = {
@@ -374,8 +390,8 @@ function doOpen(kind, free, first) {
   const got = openPack(kind, S), res = got.map((c) => addCard(S, c));
   S.packs = (S.packs || 0) + 1; save(); nav();
   const m = modal(`<h2>${first ? '🎁 新人禮物：' : free ? '🎁 ' : ''}${PACKS[kind].name}</h2>
-    <div class="reveal">${got.map((c, k) => `<div class="flip" data-k="${k}"><div class="back">⚾</div><div class="front">${cardHTML(c, res[k].inst)}
-      <div class="tag t-${res[k].kind}">${res[k].kind === 'new' ? 'NEW!' : res[k].kind === 'star' ? `★ 升星 ${res[k].inst.stars}★` : '經驗 +600'}</div></div></div>`).join('')}</div>
+    <div class="reveal">${got.map((c, k) => `<div class="flip ${c.rarity === 'EX' ? 'ex' : c.rarity === 'LR' ? 'lr' : ''}" data-k="${k}"><div class="back">⚾</div><div class="front">${cardHTML(c, res[k].inst)}
+      <div class="tag t-${res[k].kind}">${res[k].kind === 'new' ? (c.rarity === 'EX' ? '✦ 隱藏球員登場！' : 'NEW!') : res[k].kind === 'star' ? `★ 升星 ${res[k].inst.stars}★${res[k].learned ? `<br>習得「${SK[res[k].learned].name}」` : ''}` : '經驗 +600'}</div></div></div>`).join('')}</div>
     <div class="row"><button id="flipAll">全部翻開</button><button class="big" id="done">好！</button></div>`, 'wide');
   drawPortraits();
   const flips = [...m.querySelectorAll('.flip')];
@@ -384,6 +400,7 @@ function doOpen(kind, free, first) {
   m.querySelector('#flipAll').onclick = () => flips.forEach((f) => f.classList.add('open'));
   m.querySelector('#done').onclick = () => { clearInterval(t); closeModal(); render(); };
 }
+const REROLL = 1000;
 function playerDialog(inst) {
   const c = card(inst), r = stats(inst), rar = RARITY[c.rarity], keys = c.role === 'H' ? [['contact', '打擊'], ['power', '力量'], ['eye', '選球'], ['speed', '速度'], ['defense', '守備'], ['arm', '臂力']] : [['fastball', '速球'], ['breaking', '變化球'], ['control', '控球'], ['stamina', '體力']];
   const st = inst.st, line = !st ? '還沒有出賽紀錄' : c.role === 'H' ? `${st.AB} 打數 ${st.H} 安打（打率 ${st.AB ? (st.H / st.AB).toFixed(3).replace(/^0/, '') : '.---'}）${st.HR} 轟 ${st.RBI} 打點` : `${Math.floor(st.outs / 3)}.${st.outs % 3} 局 ${st.pSO} 三振 防禦率 ${st.outs ? (st.pER * 27 / st.outs).toFixed(2) : '-'} ${st.W} 勝 ${st.L} 敗 ${st.S} 救援`;
@@ -392,10 +409,18 @@ function playerDialog(inst) {
     <p class="muted">${POS_CN[c.pos]}｜${c.role === 'H' ? (c.bats === 'R' ? '右打' : '左打') : (c.throws === 'R' ? '右投' : '左投') + ' ' + (c.velo || '') + 'km ' + (c.pitches || []).join('、')}｜能力 ${ovr(inst)}</p>
     ${keys.map(([k, l]) => `<div class="rt"><span>${l}</span><i><b style="width:${r[k]}%"></b></i><span>${r[k]}</span></div>`).join('')}
     <p>Lv ${inst.lv} / ${rar.cap}　${'★'.repeat(inst.stars)}${'☆'.repeat(STAR_MAX - inst.stars)}　${maxed ? '（等級已滿）' : `經驗 ${inst.xp} / ${xpNeed(inst.lv)}`}</p>
+    <h4>技能 <small class="muted">${(inst.sk || []).length} 個</small></h4><ul class="skl">${(inst.sk || []).map((id) => { const k = SK[id]; return `<li class="g${k.grade}"><b style="color:${GR[k.grade].color}">${GR[k.grade].name}</b> ${esc(k.name)}<small>${SKILLS.desc(k)}</small></li>`; }).join('') || '<li class="muted">沒有技能</li>'}</ul>
     <p class="muted">生涯：${line}</p>
     <div class="row"><button id="train" class="big" ${maxed || S.coins < 300 ? 'disabled' : ''}>💪 特訓（🪙300，經驗 +200）</button>
+    <button id="reroll" ${S.coins < REROLL ? 'disabled' : ''} title="重新隨機抽選技能（專屬技能保留）">🎲 技能重練（🪙${REROLL}）</button>
     <button id="sell" ${inUse ? 'disabled title="在陣容中，請先換下"' : ''}>釋出（🪙${rar.sell * inst.stars}）</button><button id="close">關閉</button></div></div></div>`, 'wide');
   drawPortraits();
+  m.querySelector('#reroll').onclick = () => {
+    if (!confirm(`花 🪙${REROLL} 重新抽選 ${c.name} 的技能？`)) return;
+    S.coins -= REROLL; const n = (inst.sk || []).filter((id) => !SK[id].owner).length, keep = (inst.sk || []).filter((id) => SK[id].owner);
+    inst.sk = keep; for (let k = 0; k < n; k++) { const id = SKILLS.rollOne(c, inst.sk); if (id) inst.sk.push(id); }
+    save(); playerDialog(inst); toast('技能重練完成！');
+  };
   m.querySelector('#train').onclick = () => { S.coins -= 300; const n = gainXp(inst, 200); save(); playerDialog(inst); if (n) toast(`${c.name} 升到 Lv ${inst.lv}！`); };
   m.querySelector('#sell').onclick = () => { if (!confirm(`確定釋出 ${c.name}？`)) return; S.coins += rar.sell * inst.stars; S.cards = S.cards.filter((i) => i !== inst); save(); closeModal(); render(); };
   m.querySelector('#close').onclick = () => { closeModal(); render(); };
@@ -418,7 +443,7 @@ function resultDialog(o) {
   const s = o.season;
   const m = modal(`<h2>${o.win ? '🎉 勝利！' : o.tie ? '平手' : '敗戰'}</h2><div class="big score">${o.rMe} : ${o.rOp}</div>
     <p>🪙 +${o.coins}${o.mvp ? `　MVP：<b>${esc(o.mvp.name)}</b>` : ''}</p>${lv ? `<p class="good">升級：${lv}</p>` : ''}
-    ${s ? `<div class="season"><h3>球季結束：第 ${s.rank} 名</h3><p>🪙 +${s.prize}${s.tickets ? '　🎟 冠軍高級包 ×1' : ''}</p>
+    ${s ? `<div class="season"><h3>球季結束：第 ${s.rank} 名</h3><p>🪙 +${s.prize}${s.tickets ? '　🎟 冠軍高級包 ×1' : ''}</p>${s.ex ? `<p class="exwin">✦ 傳奇聯盟冠軍！隱藏超級球員 <b>${esc(s.ex.card.name)}</b> ${s.ex.res.kind === 'new' ? '加入球隊！' : '升星！'}</p>` : ''}
       <p class="${s.move > 0 ? 'good' : s.move < 0 ? 'bad' : ''}">${s.move > 0 ? `⬆ 升級到 ${DIVS[s.from + 1].name}！` : s.move < 0 ? `⬇ 降到 ${DIVS[s.from - 1].name}` : `留在 ${DIVS[s.from].name}`}</p></div>` : ''}
     <div class="row"><button class="big" id="ok">回到主場</button></div>`);
   m.querySelector('#ok').onclick = () => { closeModal(); screen = 'home'; render(); };
@@ -427,8 +452,9 @@ $('#btnBack').onclick = () => { if (!Match.finished && !confirm('比賽還沒結
 
 // ---------------------------------------------------------------- go
 S = load();
+migrate();
 if (S && !S.league) newSeason(0);
 render();
 cloudInit();
-window.__club = { get S() { return S; }, render, newClub, doOpen, playMatch, afterGame, setScreen: (k) => { screen = k; render(); } };
+window.__club = { get S() { return S; }, render, endSeason, playerDialog, newClub, doOpen, playMatch, afterGame, setScreen: (k) => { screen = k; render(); } };
 })();

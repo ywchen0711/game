@@ -367,6 +367,7 @@ class Game {
     this.L = log;
     const off = this.off(), def = this.def(), F = def.field;
     const P = def.pitcher, B = off.lineup[off.bi].p;
+    if (root.SKILLS) root.SKILLS.apply(this, off, def, B, P, log);        // 技能：依情境調整能力值
     if (this.balls === 0 && this.strikes === 0) { B.g.PA++; P.g.BF++; }
 
     // 盜壘

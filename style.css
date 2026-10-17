@@ -84,12 +84,12 @@ table.lineup select { width: 100%; }
 .pkart { font-size: 54px; filter: drop-shadow(0 0 10px rgba(255,200,58,.5)); }
 .pk-premium .pkart { filter: drop-shadow(0 0 14px rgba(192,106,255,.9)); }
 .reveal { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 12px 0; perspective: 900px; }
-.flip { position: relative; width: 128px; height: 196px; cursor: pointer; transform-style: preserve-3d; transition: transform .55s; }
+.flip { position: relative; width: 128px; height: 222px; cursor: pointer; transform-style: preserve-3d; transition: transform .55s; }
 .flip.open { transform: rotateY(180deg); }
 .flip .back, .flip .front { position: absolute; inset: 0; backface-visibility: hidden; }
 .flip .back { display: grid; place-items: center; font-size: 46px; background: repeating-linear-gradient(45deg, #2a3045 0 8px, #222739 8px 16px); border: 3px solid var(--gold); border-radius: 8px; }
 .flip .front { transform: rotateY(180deg); }
-.flip .front .pcard { height: 170px; }
+.flip .front .pcard { height: 184px; }
 .tag { margin-top: 4px; font-weight: 900; font-size: 13px; text-align: center; }
 .t-new { color: var(--gold); } .t-star { color: #ff8ad8; } .t-xp { color: var(--muted); }
 
@@ -144,3 +144,25 @@ table.lines { border-collapse: collapse; width: 100%; font-size: 13px; font-fami
 #log .inning { color: var(--led); font-weight: bold; }
 #log .final { color: var(--gold); font-weight: bold; }
 .sel { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+
+/* ---- LR / hidden EX tiers and skills ---- */
+.pcard.r-LR { background: linear-gradient(160deg, #5a1a14, #1e0c0a 60%, #5a1a14); animation: shine 2s infinite; }
+.pcard.r-EX { background: linear-gradient(160deg, #3a1450, #10101e 55%, #143a50); border-image: linear-gradient(135deg, #ff5a8a, #ffc83a, #4cd07a, #4a9aff, #c06aff) 1; animation: shine 1.4s infinite; }
+.pcard.r-EX .rar { background: linear-gradient(90deg, #ff6ad5, #ffc83a, #6ad8ff); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: none; }
+.pcard.r-EX.unknown { filter: none; opacity: .8; }
+.r-LR { color: #ff5a4a; } .r-EX { color: #ff6ad5; }
+.pcard .sks { display: flex; gap: 3px; justify-content: center; margin-top: 3px; }
+.pcard .sks i { width: 7px; height: 7px; display: block; transform: rotate(45deg); box-shadow: 0 0 0 1px #000; }
+ul.skl { list-style: none; padding: 0; margin: 4px 0 8px; display: grid; gap: 4px; }
+ul.skl li { background: #1a1e2c; border: 1px solid #2f3650; padding: 4px 8px; font-size: 13px; }
+ul.skl li small { display: block; color: var(--muted); font-size: 11px; }
+ul.skl li.g4 { border-color: #ff6ad5; box-shadow: 0 0 8px rgba(255,106,213,.35); }
+.skc { display: flex; flex-wrap: wrap; gap: 3px; margin: 2px 0 4px; }
+.skc span { font-size: 11px; padding: 0 5px; border: 1px solid; line-height: 16px; }
+.skc .g1 { color: #e0a060; border-color: #7a5030; } .skc .g2 { color: #d8e0f0; border-color: #6a7490; } .skc .g3 { color: #ffc83a; border-color: #8a6a10; } .skc .g4 { color: #ff8ae0; border-color: #a03a90; }
+#log .skill { color: #8ad0ff; } #log .skill.g3 { color: #ffc83a; } #log .skill.g4 { color: #ff8ae0; font-weight: bold; }
+.flip.ex .front { animation: exglow 1.2s infinite alternate; }
+.flip.lr .front { box-shadow: 0 0 18px rgba(255,90,74,.6); }
+@keyframes exglow { from { box-shadow: 0 0 10px #ff6ad5; } to { box-shadow: 0 0 28px #ffc83a, 0 0 46px #6ad8ff; } }
+.tag.t-new { white-space: normal; }
+.exwin { color: #ff8ae0; font-weight: bold; }

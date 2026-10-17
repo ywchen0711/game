@@ -140,7 +140,7 @@ const HAIRS = ['#1b1410', '#3a2414', '#6a3e1e', '#c8962e', '#a4381c', '#e8e2d8']
 const DIGITS = { 0: ['111', '101', '101', '101', '111'], 1: ['010', '110', '010', '010', '111'], 2: ['111', '001', '111', '100', '111'], 3: ['111', '001', '011', '001', '111'],
   4: ['101', '101', '111', '001', '001'], 5: ['111', '100', '111', '001', '111'], 6: ['111', '100', '111', '101', '111'], 7: ['111', '001', '010', '010', '010'],
   8: ['111', '101', '111', '101', '111'], 9: ['111', '101', '111', '001', '111'] };
-const STAR_LOOK = { 'Josh Chen': { skin: 1, hair: 1, beard: false }, 'Jasper Chen': { skin: 1, hair: 0, beard: false }, 'Jeff Chen': { skin: 1, hair: 0, beard: true, shades: true }, 'Erin Lai': { skin: 0, hair: 1, beard: false, pony: true } };
+const STAR_LOOK = { 'Josh Chen': { skin: 1, hair: 1, beard: false }, 'Jasper Chen': { skin: 1, hair: 0, beard: false }, 'Jeff Chen': { skin: 1, hair: 0, beard: true, shades: true }, 'Erin Lai': { skin: 0, hair: 1, beard: false, shades: false, pony: true, girl: true } };
 function look(p) {
   if (p._look) return p._look;
   let seed = Math.abs(((+p.lookSeed || +p.id || 7) * 2654435761) % 2147483647) || 7;
@@ -173,9 +173,10 @@ function sprite(p, team, frame) {
     num.split('').forEach((dd, i) => DIGITS[dd].forEach((row, yy) => row.split('').forEach((b, xx) => { if (b === '1') R(dx + i * 4 + xx, ty + 1 + yy, 1, 1, trim); })));
   };
   const head = (helmet, mask) => {
-    if (L.pony) { R(hx + 10, hy + 4, 3, 7, hair); }
+    if (L.pony) { R(hx + 10, hy + 4, 3, 7, hair); if (L.girl) { R(hx + 11, hy + 2, 4, 11, hair); R(hx + 12, hy + 13, 2, 2, hair); } }
     R(hx, hy + 1, 12, 9, skin); R(hx + 1, hy, 10, 11, skin); R(hx + 1, hy + 10, 10, 1, skinD); R(hx - 1, hy + 5, 1, 2, skin); R(hx + 12, hy + 5, 1, 2, skinD);
     R(hx, hy + 3, 1, 2, hair); R(hx + 11, hy + 3, 1, 2, hair);
+    if (L.girl) { R(hx - 1, hy + 2, 2, 9, hair); R(hx + 11, hy + 2, 2, 9, hair); }               // long hair
     // cap or batting helmet
     R(hx - 1, hy - 1, 14, 4, hat); R(hx, hy - 2, 12, 1, hat); R(hx + 2, hy - 1, 3, 1, shade(hat, 0.3));
     if (helmet) { R(hx - 1, hy + 3, 3, 4, hat); R(hx - 1, hy - 1, 14, 1, shade(hat, 0.4)); } else { R(hx - 2, hy + 2, 16, 1, shade(hat, -0.3)); }
@@ -185,7 +186,8 @@ function sprite(p, team, frame) {
     else { R(hx + 3, hy + 5, 2, 2, '#1a1420'); R(hx + 7, hy + 5, 2, 2, '#1a1420'); R(hx + 3, hy + 5, 1, 1, '#ffffff'); R(hx + 7, hy + 5, 1, 1, '#ffffff'); }
     R(hx + 1, hy + 7, 2, 1, 'rgba(255,110,120,0.45)'); R(hx + 9, hy + 7, 2, 1, 'rgba(255,110,120,0.45)');
     if (L.beard) { R(hx + 1, hy + 8, 10, 3, hair); R(hx + 4, hy + 8, 4, 1, skin); }
-    R(hx + 5, hy + 8, 2, 1, '#8a3a3a');
+    if (L.girl && !L.shades) { R(hx + 2, hy + 5, 1, 1, '#1a1420'); R(hx + 9, hy + 5, 1, 1, '#1a1420'); }   // lashes
+    R(hx + 5, hy + 8, 2, 1, L.girl ? '#e0506e' : '#8a3a3a');
     if (mask) { R(hx + 1, hy + 3, 10, 7, 'rgba(30,30,36,0.55)'); for (let k = 0; k < 3; k++) R(hx + 1, hy + 4 + k * 2, 10, 1, '#2a2a30'); }
   };
   const arms = (lx, ly2, rx, ry2, gloveSide) => {                                   // two arms with hands; one wears the glove
@@ -473,6 +475,7 @@ function addLog(items) {
 function gradeColor(v) { return v >= 90 ? '#ff8a3a' : v >= 80 ? '#ffc83a' : v >= 70 ? '#9be36a' : v >= 60 ? '#4cd07a' : v >= 50 ? '#8ab8f0' : v >= 40 ? '#9aa2bd' : '#e08080'; }
 function grade(v) { return v >= 90 ? 'S' : v >= 80 ? 'A' : v >= 70 ? 'B' : v >= 60 ? 'C' : v >= 50 ? 'D' : v >= 40 ? 'E' : 'F'; }
 const bar = (label, v, color) => `<div class="rt"><span>${label}</span><i><b style="width:${clamp(v, 0, 100)}%;background:${color || gradeColor(v)}"></b></i><span>${Math.round(v)}</span></div>`;
+const skl = p => !p.sk || !p.sk.length || !window.SKILLS ? '' : `<div class="skc">${p.sk.map(id => { const s = SKILLS.BY_ID[id]; return s ? `<span class="g${s.grade}" title="${SKILLS.desc(s)}">${s.name}</span>` : ''; }).join('')}</div>`;
 const ip = outs => `${Math.floor(outs / 3)}.${outs % 3}`;
 function refreshPanels() {
   const sn = snap, n = Math.max(9, sn.line[0].length, sn.line[1].length);
@@ -487,13 +490,13 @@ function refreshPanels() {
   const lim = game.pLimit(P), st = clamp(1 - P.g.NP / lim, 0, 1) * 100;
   $('cardP').innerHTML = `<h3><span class="chip" style="background:${P.team.bar}"></span>#${P.num} ${nm(P)} <span class="role">${POS_CN[P.role]}</span></h3>
     <div class="sub">${P.throws === 'R' ? '右投' : '左投'}｜${P.velo}km｜${(P.pitches || []).join('、')}</div>
-    ${bar('速球', P.r.fastball)}${bar('變化球', P.r.breaking)}${bar('控球', P.r.control)}${bar('體力', P.r.stamina)}${bar('剩餘', st, st > 50 ? '#4cd07a' : st > 25 ? '#ffc83a' : '#ff5a5a')}
+    ${skl(P)}${bar('速球', P.r.fastball)}${bar('變化球', P.r.breaking)}${bar('控球', P.r.control)}${bar('體力', P.r.stamina)}${bar('剩餘', st, st > 50 ? '#4cd07a' : st > 25 ? '#ffc83a' : '#ff5a5a')}
     <div class="line">本場：${ip(P.g.outs)}局 ${P.g.NP}球 被安${P.g.pH} 失${P.g.pR} 四壞${P.g.pBB} 三振${P.g.pSO}</div>`;
   const e = (sn.lineups[sn.pregame ? 0 : sn.offIdx] || []).find(x => x.id === B.id), g = B.g;
   const line = g.AB || g.BB ? `${g.AB}打數${g.H}安打${g.HR ? ' ' + g.HR + '轟' : ''}${g.RBI ? ' ' + g.RBI + '打點' : ''}${g.BB ? ' ' + g.BB + '保送' : ''}${g.SO ? ' ' + g.SO + '三振' : ''}` : '本場首打席';
   $('cardB').innerHTML = `<h3><span class="chip" style="background:${B.team.bar}"></span>#${B.num} ${nm(B)} <span class="role">${e ? POS_SHORT[e.pos] : POS_SHORT[B.pos]}</span></h3>
     <div class="sub">${B.bats === 'R' ? '右打' : '左打'}</div>
-    ${bar('打擊', B.r.contact)}${bar('力量', B.r.power)}${bar('選球', B.r.eye)}${bar('速度', B.r.speed)}${bar('守備', B.r.defense)}${bar('臂力', B.r.arm)}
+    ${skl(B)}${bar('打擊', B.r.contact)}${bar('力量', B.r.power)}${bar('選球', B.r.eye)}${bar('速度', B.r.speed)}${bar('守備', B.r.defense)}${bar('臂力', B.r.arm)}
     <div class="line">本場：${line}</div>`;
   if ($('pane-box').classList.contains('on')) renderBox();
 }
