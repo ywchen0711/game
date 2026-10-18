@@ -31,8 +31,8 @@ function nm(name) {
   return s && g1 && g2 ? `${cap(g1)}-${g2} ${s}` : name;
 }
 // team names: city + nickname
-const CITY = { 台北: 'Taipei', 新北: 'New Taipei', 桃園: 'Taoyuan', 台中: 'Taichung', 台南: 'Tainan', 高雄: 'Kaohsiung', 新竹: 'Hsinchu', 嘉義: 'Chiayi', 花蓮: 'Hualien', 基隆: 'Keelung' };
-const NICK = { 藍鷹: 'Blue Eagles', 赤獅: 'Red Lions', 翠龍: 'Jade Dragons', 金虎: 'Golden Tigers', 紫電: 'Purple Thunder', 黑熊: 'Black Bears', 海豚: 'Dolphins', 櫻花: 'Sakuras' };
+const CITY = { 台北: 'Taipei', 新北: 'New Taipei', 桃園: 'Taoyuan', 台中: 'Taichung', 台南: 'Tainan', 高雄: 'Kaohsiung', 新竹: 'Hsinchu', 嘉義: 'Chiayi', 花蓮: 'Hualien', 基隆: 'Keelung', 屏東: 'Pingtung', 宜蘭: 'Yilan', 苗栗: 'Miaoli', 彰化: 'Changhua', 雲林: 'Yunlin', 南投: 'Nantou', 台東: 'Taitung', 澎湖: 'Penghu', 金門: 'Kinmen', 馬祖: 'Matsu' };
+const NICK = { 藍鷹: 'Blue Eagles', 赤獅: 'Red Lions', 翠龍: 'Jade Dragons', 金虎: 'Golden Tigers', 紫電: 'Purple Thunder', 黑熊: 'Black Bears', 海豚: 'Dolphins', 櫻花: 'Sakuras', 雷鳥: 'Thunderbirds', 獵鷹: 'Falcons', 巨人: 'Giants', 勇士: 'Warriors', 野馬: 'Mustangs', 白鯊: 'Sharks', 火鳳: 'Phoenixes', 海盜: 'Pirates' };
 function team(full) {
   if (!EN || !full) return full;
   const m = /^(.{2})(.{2})(（客）)?$/.exec(full);
